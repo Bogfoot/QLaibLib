@@ -45,7 +45,7 @@ To build the extension for coincfinder:
 
 ### Windows requirements
 
-You require [CMake](https://cmake.org/download/)
+You require [CMake](https://cmake.org/download/).
 You can use `x64 Native Tools Command Prompt for VS 20##`, or any other build tool you like.
 You can download the `x64 Native Tools Command Prompt for Visual Studio 20##` by installing Visual Studio 20## from the official Microsoft website.
 During installation, ensure you select the "Desktop development with C++" workload, which includes the necessary tools. After installation, you can find the command prompt in the Start menu under Visual Studio 20##.
