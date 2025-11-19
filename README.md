@@ -1,9 +1,9 @@
 # QLaibLib
 
-A reorganized, publishable Python package that wraps the existing QuTAG +
-`coincfinder` toolchain. QLaibLib exposes a clean API, plotting helpers, metrics
+A reorganized Python package that wraps the existing QuTAG 
+toolchain. QLaibLib exposes a clean API, plotting helpers, metrics
 (QBER, visibility, contrast), and a Tkinter-based live dashboard without needing
-a browser.
+a browser. Ready and lab friendly. :)
 
 ## Features
 
@@ -30,6 +30,27 @@ pip install -e .
 ```
 
 The CLI becomes available as `qlaib` and the package can be imported in Python.
+
+### Installing coincfinder
+
+The C++ coincidence engine lives in `CoincFinder/` and a pre-built binary
+(`coincfinder.cp312-win_amd64.pyd`) is included for Windows + Python 3.12. To
+use it on that platform, simply keep the `.pyd` next to the project (it will be
+found via `import coincfinder`), or copy it into your virtual environment’s
+`site-packages`.
+
+To build the extension for other platforms or Python versions:
+
+```bash
+cd CoincFinder
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+# The resulting coincfinder.*.so/.pyd will be under build/
+```
+
+After building, place the generated shared library on your `PYTHONPATH`
+(e.g., drop it beside `qlaiblib/` or install it into `site-packages`). The
+`qlaiblib.io.coincfinder_backend` module will import it at runtime.
 
 ## Hardware requirements
 
