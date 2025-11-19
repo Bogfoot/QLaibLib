@@ -1,4 +1,5 @@
 # QLaibLib
+## Quantum Laibach Library
 
 A reorganized Python package that wraps the existing QuTAG 
 toolchain. QLaibLib exposes a clean API, plotting helpers, metrics
