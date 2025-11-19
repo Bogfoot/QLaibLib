@@ -45,7 +45,7 @@ To build the extension for other platforms or Python versions:
 cd CoincFinder
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
-# The resulting coincfinder.*.so/.pyd will be under build/
+# The resulting coincfinder.*.so/.pyd will be under build/ and it should also appear in the root.
 ```
 
 After building, place the generated shared library on your `PYTHONPATH`

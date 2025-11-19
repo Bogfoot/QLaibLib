@@ -3,9 +3,16 @@ __pycache__/
 *.so
 *.pyd
 *.dll
+*.o
+*.obj
+*.lib
+*.a
 *.bin
 *.log
 *.csv
+*.tmp
+*.bak
+*.swp
 .env
 env/
 .venv/
@@ -15,9 +22,39 @@ Thumbs.db
 build/
 dist/
 *.egg-info/
+# CMake artifacts
+CMakeFiles/
+CMakeCache.txt
+cmake-build*/
+*.cmake
+*.ninja
+*.sln
+*.vcxproj*
+*.user
+
+# Project-specific generated data
 Data/
 Delay_Scan_Data/
 DLL_32bit/
 DLL_64bit/
-*.zip
-*.pdf
+qber_live_log.csv
+plotter_settings.json
+libtdcbase.so
+EPC/
+coincfinder.cp312-win_amd64.pyd
+
+# Legacy/legacy scripts (keep ignored unless explicitly added)
+Client.py
+Server.py
+Print_Counts_and_Stats.py
+Stability_Check_and_Record.py
+PlotterApp_Cpp.py
+OC.py
+LongDataLog.py
+SetOvenTemp.py
+EPC_Halfwave.py
+QuTAG_MC.py
+LongDataLog.py
+
+# CoincFinder build dir
+CoincFinder/build/
