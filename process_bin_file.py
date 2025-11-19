@@ -10,7 +10,7 @@ from qlaiblib.metrics import REGISTRY
 def main():
     parser = argparse.ArgumentParser(description="Process QuTAG BIN file with QLaibLib")
     parser.add_argument("path", help="Path to BIN file produced by writeTimestamps")
-    parser.add_argument("--win", type=float, default=200.0, help="Coincidence window in ps")
+    parser.add_argument("--window", type=float, default=200.0, help="Coincidence window in ps")
     parser.add_argument("--delay-start", type=float, default=-8000.0)
     parser.add_argument("--delay-end", type=float, default=8000.0)
     parser.add_argument("--delay-step", type=float, default=50.0)

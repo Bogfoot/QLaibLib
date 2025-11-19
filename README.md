@@ -85,11 +85,34 @@ qlaib live --mock --exposure 0.5
 
 To script the same workflows, see:
 
-- `examples/process_bin_file.py` – load a recorded BIN file, auto-calibrate
-  delays, and print coincidences/metrics.
-- `examples/live_qutag.py` – initialize the QuTAG backend, calibrate once, and
-  launch the Tk dashboard with all live controls.
-- `examples/mock_quickstart.py` – Simulated plotter.
+	- `examples/process_bin_file.py` – load a recorded BIN file, auto-calibrate
+	  delays, and print coincidences/metrics.
+	- `examples/live_qutag.py` – initialize the QuTAG backend, calibrate once, and
+	  launch the Tk dashboard with all live controls.
+	- `examples/mock_quickstart.py` – Simulated plotter.
+
+## Custom coincidence layouts
+
+Coincidence logic is fully described by `CoincidenceSpec`, so you can define any
+channel combinations (2-fold or higher) and plug them into the pipeline:
+
+```python
+from qlaiblib import CoincidencePipeline, CoincidenceSpec
+
+specs = (
+    CoincidenceSpec(label="AB", channels=(1, 3), window_ps=250.0, delay_ps=12.5),
+    CoincidenceSpec(label="CD", channels=(2, 4), window_ps=250.0, delay_ps=-8.0),
+    CoincidenceSpec(label="ABC", channels=(1, 3, 5), window_ps=300.0),
+)
+pipeline = CoincidencePipeline(specs)
+```
+
+- `window_ps` **and** `delay_ps` are specified in **picoseconds**.
+- If you still want auto-delay calibration, pass your own `like_pairs` /
+  `cross_pairs` into `specs_from_delays(window_ps=..., like_pairs=..., cross_pairs=...)`
+  so the generated specs match your detector wiring.
+- The CLI and Tk dashboard reflect whatever specs you supply, so custom labels
+  automatically appear in plots, filters, and metrics.
 
 ## Python API glimpse
 
