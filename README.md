@@ -27,20 +27,21 @@ a browser. Ready and lab friendly. :)
 Clone the repository and install in editable mode:
 
 ```bash
-pip install -e .
+git clone https://github.com/Bogfoot/QLaibLib.git
+cd QLaibLib
+# pip install -e .
 ```
 
 The CLI becomes available as `qlaib` and the package can be imported in Python.
 
 ### Installing coincfinder
 
-The C++ coincidence engine lives in `coincfinder/` and a pre-built binary
-(`coincfinder.cp312-win_amd64.pyd`) is included for Windows + Python 3.12. To
-use it on that platform, simply keep the `.pyd` next to the project (it will be
-found via `import coincfinder`), or copy it into your virtual environment’s
+The C++ coincidence engine lives in `coincfinder/`. To
+use it on that platform, follow the next build instructions (it will be
+found via `import coincfinder`), or copy it into your environment’s
 `site-packages`.
 
-To build the extension for other platforms or Python versions:
+To build the extension for coincfinder:
 
 ```bash
 cd coincfinder
@@ -50,7 +51,7 @@ cmake --build build --config Release
 ```
 
 After building, place the generated shared library on your `PYTHONPATH`
-(e.g., drop it beside `qlaiblib/` or install it into `site-packages`). The
+(it is automatically copied besides `qlaiblib/` or install it into `site-packages`). The
 `qlaiblib.io.coincfinder_backend` module will import it at runtime.
 
 ## Hardware requirements
@@ -62,6 +63,7 @@ After building, place the generated shared library on your `PYTHONPATH`
   Windows/macOS/Linux).
 
 ## CLI usage
+### Experimental
 
 ```bash
 # Count singles for one exposure chunk and plot the bar chart
@@ -86,6 +88,7 @@ To script the same workflows, see:
   delays, and print coincidences/metrics.
 - `examples/live_qutag.py` – initialize the QuTAG backend, calibrate once, and
   launch the Tk dashboard with all live controls.
+- `examples/mock_quickstart.py` – Simulated plotter.
 
 ## Python API glimpse
 
@@ -113,4 +116,4 @@ run_dashboard(controller)
 
 The original helper scripts remain untouched for reference (`Print_Counts_and_Stats.py`,
 `Stability_Check_and_Record.py`, etc.), but new development should happen
-through the packaged interfaces above.
+through the packaged interfaces above. They can be distributed upon reasonable request.
