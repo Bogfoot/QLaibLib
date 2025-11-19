@@ -34,7 +34,7 @@ The CLI becomes available as `qlaib` and the package can be imported in Python.
 
 ### Installing coincfinder
 
-The C++ coincidence engine lives in `CoincFinder/` and a pre-built binary
+The C++ coincidence engine lives in `coincfinder/` and a pre-built binary
 (`coincfinder.cp312-win_amd64.pyd`) is included for Windows + Python 3.12. To
 use it on that platform, simply keep the `.pyd` next to the project (it will be
 found via `import coincfinder`), or copy it into your virtual environment’s
@@ -43,7 +43,7 @@ found via `import coincfinder`), or copy it into your virtual environment’s
 To build the extension for other platforms or Python versions:
 
 ```bash
-cd CoincFinder
+cd coincfinder
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 # The resulting coincfinder.*.so/.pyd will be under build/ and it should also appear in the root.
