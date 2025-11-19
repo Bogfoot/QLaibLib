@@ -67,4 +67,4 @@ class QuTAGBackend(AcquisitionBackend):
         try:
             self._driver.writeTimestamps("", self._driver.FILEFORMAT_NONE)
         finally:
-            self._driver.close()
+            self._driver.deInitialize()
