@@ -53,14 +53,4 @@ target_link_libraries(coincfinder PRIVATE coincfinder_core)
 # Make sure the module is called "coincfinder" (no extra suffix like _d)
 set_target_properties(coincfinder PROPERTIES OUTPUT_NAME "coincfinder")
 
-# -------------------------------------------------------
-# Optional: copy built module next to your Python scripts
-# -------------------------------------------------------
-add_custom_command(
-    TARGET coincfinder
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:coincfinder>"
-        "${PROJECT_SOURCE_DIR}/../$<TARGET_FILE_NAME:coincfinder>"
-    COMMENT "Copying coincfinder module to parent ScanCode folder..."
-)
+install(TARGETS coincfinder DESTINATION .)

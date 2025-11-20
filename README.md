@@ -24,59 +24,33 @@ a browser. Ready and lab friendly. :)
 
 ## Installation
 
-Clone the repository and install in editable mode:
+Clone the repository and install (the build now auto-compiles the C++
+`coincfinder` module via [scikit-build-core](https://github.com/scikit-build/scikit-build-core)):
 
 ```bash
 git clone https://github.com/Bogfoot/QLaibLib.git
 cd QLaibLib
-# pip install -e .
+python -m venv .venv && source .venv/bin/activate  # optional but recommended
+pip install .
 ```
 
-The CLI becomes available as `qlaib` and the package can be imported in Python.
+Installation requirements:
 
-### Installing coincfinder
+- Python ≥ 3.10
+- `cmake>=3.18` and `ninja` (installed automatically by pip if missing, or install
+  system packages such as `sudo apt install cmake ninja-build` / Homebrew)
+- A C++20 compiler (Visual Studio Build Tools on Windows, `build-essential`/`clang`
+  on Linux/macOS)
 
-The C++ coincidence engine lives in `coincfinder/`. To
-use it on that platform, follow the next build instructions (it will be
-found via `import coincfinder`), or copy it into your environment’s
-`site-packages`.
-
-To build the extension for coincfinder:
-
-### Windows requirements
-
-You require [CMake](https://cmake.org/download/).
-You can use `x64 Native Tools Command Prompt for VS 20##`, or any other build tool you like.
-You can download the `x64 Native Tools Command Prompt for Visual Studio 20##` by installing Visual Studio 20## from the official Microsoft website.
-During installation, ensure you select the "Desktop development with C++" workload, which includes the necessary tools. After installation, you can find the command prompt in the Start menu under Visual Studio 20##.
-
-### Linux requirements
-
-Have CMake and build-essentials installed via:
-
-```bash
-sudo apt-get install cmake build-essentials
-```
-
-#### Building
-
-```bash
-cd coincfinder
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release
-# The resulting coincfinder.*.so/.pyd will be under 
-# build/ and it should also appear in the root.
-```
-
-After building, place the generated shared library on your `PYTHONPATH`
-(it is automatically copied besides `qlaiblib/` or install it into `site-packages`). The
-`qlaiblib.io.coincfinder_backend` module will import it at runtime.
+Once published to PyPI you can simply run `pip install qlaiblib` on any machine
+with those prerequisites. For developer builds, `python -m build` produces wheels
+in `dist/` that already include the compiled `coincfinder` extension.
 
 ## Hardware requirements
 
 - QuTAG hardware with the `QuTAG_MC` Python bindings installed.
-- The compiled `coincfinder` extension (already present in this folder). Place
-  it on `PYTHONPATH` or keep it beside the package so it can be imported.
+- The C++ `coincfinder` extension (built automatically during `pip install` or
+  bundled in prebuilt wheels once published).
 - For live plotting, Tkinter must be available (ships with standard Python on
   Windows/macOS/Linux).
 
