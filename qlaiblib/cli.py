@@ -163,7 +163,7 @@ def live(
     delay_step_ps: float = typer.Option(10.0, help="Delay scan step (ps)."),
     demo_file: Path | None = typer.Option(None, help="Replay this BIN file instead of live hardware."),
     bucket_seconds: float | None = typer.Option(None, help="Bucket duration (s) in demo mode."),
-    history_points: int = typer.Option(500, help="Number of points to retain in time series."),
+    history_points: int = typer.Option(200, help="Number of points to retain in time series."),
 ):
     """Launch the Tkinter live dashboard."""
 

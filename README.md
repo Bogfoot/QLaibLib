@@ -17,9 +17,10 @@ a browser. Ready and lab friendly. :)
 - **Plotting**: Matplotlib helpers for singles, coincidences, and metric
   summaries; reusable both in scripts and in the dashboard.
 - **Live dashboard**: Tkinter GUI with tabs for live time-series plots, delay
-  histograms, settings, and data/export tools. Supports keyboard shortcuts (1–5)
-  to switch plot layouts, per-pair contrast/heralding stats, histogram auto-refresh,
-  and a history buffer (default 500 points) with CSV/raw BIN export buttons.
+  histograms, settings, and data/export tools. Supports keyboard shortcuts (1–6)
+  to switch plot layouts (including a CHSH view with all 16 coincidence pairs
+  and S±σ), per-pair contrast/heralding stats, histogram auto-refresh, and a
+  history buffer (default 500 points) with CSV/raw BIN export buttons.
 - **CLI**: `qlaib` entry point with `count`, `coincide`, and `live` commands.
 
 ## Installation
