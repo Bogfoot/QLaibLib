@@ -5,10 +5,12 @@ from __future__ import annotations
 import itertools
 import queue
 import tkinter as tk
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ..coincidence.specs import DEFAULT_SPECS
@@ -57,6 +59,8 @@ class DashboardApp(tk.Tk):
         self.delay_vars = {ch: tk.DoubleVar(value=self.settings.get("delays_ps", {}).get(str(ch), 0.0)) for ch in range(1, 9)}
         for ch, var in self.delay_vars.items():
             var.trace_add("write", lambda *_args, ch=ch: self._update_delay_setting(ch))
+        self.executor = ThreadPoolExecutor(max_workers=2)
+        self._pending_histogram = None
 
         self._build_ui()
         self._running = False
@@ -270,7 +274,8 @@ class DashboardApp(tk.Tk):
                     (line,) = ax.plot([], [], label=f"Ch {ch}")
                     self._lines["singles"][ch] = line
                 if data:
-                    line.set_data(times[-len(data):], data)
+                    ts, ys = self._downsample_series(times, data)
+                    line.set_data(ts, ys)
                 else:
                     line.set_data([], [])
             ax.set_xlim(times[0], times[-1])
@@ -293,7 +298,8 @@ class DashboardApp(tk.Tk):
                 display = f"{label} (C={data[-1] if data else 0}, H={heralding:.1f}%, V={contrast:.2f})"
                 line.set_label(display)
                 if data:
-                    line.set_data(times[-len(data):], data)
+                    ts, ys = self._downsample_series(times, data)
+                    line.set_data(ts, ys)
                 else:
                     line.set_data([], [])
             ax.set_xlim(times[0], times[-1])
@@ -314,11 +320,13 @@ class DashboardApp(tk.Tk):
             if self._lines["qber"] is None:
                 (self._lines["qber"],) = qber_ax.plot([], [], label="QBER", color="#ff006e")
             if vis_data:
-                self._lines["visibility"].set_data(times[-len(vis_data):], vis_data)
+                ts, ys = self._downsample_series(times, vis_data)
+                self._lines["visibility"].set_data(ts, ys)
             else:
                 self._lines["visibility"].set_data([], [])
             if qber_data:
-                self._lines["qber"].set_data(times[-len(qber_data):], qber_data)
+                ts, ys = self._downsample_series(times, qber_data)
+                self._lines["qber"].set_data(ts, ys)
             else:
                 self._lines["qber"].set_data([], [])
             vis_ax.set_xlim(times[0], times[-1])
@@ -376,8 +384,20 @@ class DashboardApp(tk.Tk):
         self._lines["coincidences"] = {}
         self.figure.tight_layout()
 
+    def _downsample_series(self, times: list[float], data: list[float], limit: int | None = None):
+        if not data:
+            return [], []
+        limit = limit or min(self.history.max_points, 600)
+        series_times = times[-len(data):]
+        if len(data) <= limit:
+            return series_times, data
+        idx = np.linspace(0, len(data) - 1, limit, dtype=int)
+        sampled_times = [series_times[i] for i in idx]
+        sampled_values = [data[i] for i in idx]
+        return sampled_times, sampled_values
+
     def _refresh_histogram(self):
-        if not self._latest_flatten:
+        if not self._latest_flatten or self._pending_histogram:
             return
         label = self.hist_pair_var.get()
         spec = next((s for s in self.specs if s.label == label), None)
@@ -388,21 +408,46 @@ class DashboardApp(tk.Tk):
         trace_b = self._latest_flatten.get(ch_b)
         if trace_a is None or trace_b is None or not len(trace_a) or not len(trace_b):
             return
+        params = (
+            trace_a.copy(),
+            trace_b.copy(),
+            float(self.hist_window_ps.get()),
+            float(self.hist_start_ps.get()),
+            float(self.hist_end_ps.get()),
+            float(self.hist_step_ps.get()),
+            label,
+        )
+        self._pending_histogram = self.executor.submit(self._compute_histogram, params)
+        self._pending_histogram.add_done_callback(lambda fut: self.after(0, self._update_histogram_plot, fut))
+
+    @staticmethod
+    def _compute_histogram(args):
+        trace_a, trace_b, window_ps, start_ps, end_ps, step_ps, label = args
         offsets, counts = cf_backend.compute_histogram(
             trace_a,
             trace_b,
-            window_ps=float(self.hist_window_ps.get()),
-            delay_start_ps=float(self.hist_start_ps.get()),
-            delay_end_ps=float(self.hist_end_ps.get()),
-            delay_step_ps=float(self.hist_step_ps.get()),
+            window_ps=window_ps,
+            delay_start_ps=start_ps,
+            delay_end_ps=end_ps,
+            delay_step_ps=step_ps,
         )
+        return label, offsets, counts
+
+    def _update_histogram_plot(self, future):
+        self._pending_histogram = None
+        if future.cancelled():
+            return
+        try:
+            label, offsets, counts = future.result()
+        except Exception as exc:
+            print(f"Histogram computation failed: {exc}")
+            return
         self.hist_ax.clear()
         self.hist_ax.plot(offsets, counts)
         self.hist_ax.set_xlabel("Delay (ps)")
         self.hist_ax.set_ylabel("Counts")
         self.hist_ax.set_title(f"Histogram {label}")
         self.hist_ax.grid(True, alpha=0.2)
-        self.hist_fig.tight_layout()
         self.hist_canvas.draw_idle()
 
     def _contrast_for_label(self, label: str) -> float:
@@ -452,6 +497,7 @@ class DashboardApp(tk.Tk):
                 self.controller.close()
             except Exception as exc:
                 print(f"Failed to close controller: {exc}")
+        self.executor.shutdown(wait=False)
         self.destroy()
 
 
