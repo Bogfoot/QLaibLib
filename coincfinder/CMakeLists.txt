@@ -1,17 +1,12 @@
 cmake_minimum_required(VERSION 3.18)
 project(CoincFinder LANGUAGES CXX)
 
-# -------------------------------------------------------
-# Basic compiler settings (need C++20 for std::span)
-# -------------------------------------------------------
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# -------------------------------------------------------
 # Core sources shared by everything
-# -------------------------------------------------------
 set(COINCFINDER_SOURCES
     src/Coincidences.cpp
     src/ReadCSV.cpp
@@ -31,9 +26,7 @@ if(OpenMP_CXX_FOUND)
     target_compile_definitions(coincfinder_core PUBLIC COINCFINDER_WITH_OPENMP=1)
 endif()
 
-# -------------------------------------------------------
 # Python module via pybind11
-# -------------------------------------------------------
 find_package(pybind11 CONFIG QUIET)
 if(NOT pybind11_FOUND)
     message(STATUS "pybind11 not found. Fetching via FetchContent.")
@@ -46,11 +39,9 @@ if(NOT pybind11_FOUND)
     FetchContent_MakeAvailable(pybind11)
 endif()
 
-# Build the pybind11 module: coincfinder
 pybind11_add_module(coincfinder MODULE src/bindings.cpp)
 target_link_libraries(coincfinder PRIVATE coincfinder_core)
 
-# Make sure the module is called "coincfinder" (no extra suffix like _d)
 set_target_properties(coincfinder PROPERTIES OUTPUT_NAME "coincfinder")
 
 install(TARGETS coincfinder DESTINATION .)
