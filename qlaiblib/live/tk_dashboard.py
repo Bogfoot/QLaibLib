@@ -104,7 +104,9 @@ class DashboardApp(tk.Tk):
         self.ax_singles = None
         self.ax_coinc = None
         self.ax_metrics = None
+        self.ax_metrics_secondary = None
         self._current_layout: tuple[str, ...] = ()
+        self._lines = {"singles": {}, "coincidences": {}, "visibility": None, "qber": None}
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.plot_tab)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         self.figure.tight_layout()
@@ -261,31 +263,65 @@ class DashboardApp(tk.Tk):
 
         if self.ax_singles is not None and "singles" in layout:
             ax = self.ax_singles
-            ax.clear()
             for ch, values in sorted(self.history.singles.items()):
-                ax.plot(times[: len(values)], list(values), label=f"Ch {ch}")
+                data = list(values)
+                line = self._lines["singles"].get(ch)
+                if line is None:
+                    (line,) = ax.plot([], [], label=f"Ch {ch}")
+                    self._lines["singles"][ch] = line
+                if data:
+                    line.set_data(times[-len(data):], data)
+                else:
+                    line.set_data([], [])
+            ax.set_xlim(times[0], times[-1])
+            ax.relim()
+            ax.autoscale_view(True, True, True)
             ax.set_ylabel("Singles")
             ax.legend(ncol=4, fontsize=7)
             ax.grid(True, alpha=0.2)
 
         if self.ax_coinc is not None and "coincidences" in layout:
-            self.ax_coinc.clear()
+            ax = self.ax_coinc
             for label, values in self.history.coincidences.items():
+                data = list(values)
+                line = self._lines["coincidences"].get(label)
+                if line is None:
+                    (line,) = ax.plot([], [], label=label)
+                    self._lines["coincidences"][label] = line
                 contrast = self._contrast_for_label(label)
                 heralding = self._heralding_for_label(label)
-                latest = values[-1] if values else 0
-                display = f"{label} (C={latest}, H={heralding:.1f}%, V={contrast:.2f})"
-                self.ax_coinc.plot(times[: len(values)], list(values), label=display)
-            self.ax_coinc.set_ylabel("Coincidences")
-            self.ax_coinc.legend(ncol=2, fontsize=7)
-            self.ax_coinc.grid(True, alpha=0.2)
+                display = f"{label} (C={data[-1] if data else 0}, H={heralding:.1f}%, V={contrast:.2f})"
+                line.set_label(display)
+                if data:
+                    line.set_data(times[-len(data):], data)
+                else:
+                    line.set_data([], [])
+            ax.set_xlim(times[0], times[-1])
+            ax.relim()
+            ax.autoscale_view(True, True, True)
+            ax.set_ylabel("Coincidences")
+            ax.legend(ncol=2, fontsize=7)
+            ax.grid(True, alpha=0.2)
 
         if self.ax_metrics is not None and "metrics" in layout:
             vis_ax = self.ax_metrics
-            vis_ax.clear()
+            qber_ax = self.ax_metrics_secondary or vis_ax.twinx()
+            self.ax_metrics_secondary = qber_ax
             vis_data = list(self.history.metrics.get("visibility", []))
             qber_data = list(self.history.metrics.get("QBER_total", []))
-            vis_ax.set_ylabel("Visibility")
+            if self._lines["visibility"] is None:
+                (self._lines["visibility"],) = vis_ax.plot([], [], label="Visibility", color="#00a6ff")
+            if self._lines["qber"] is None:
+                (self._lines["qber"],) = qber_ax.plot([], [], label="QBER", color="#ff006e")
+            if vis_data:
+                self._lines["visibility"].set_data(times[-len(vis_data):], vis_data)
+            else:
+                self._lines["visibility"].set_data([], [])
+            if qber_data:
+                self._lines["qber"].set_data(times[-len(qber_data):], qber_data)
+            else:
+                self._lines["qber"].set_data([], [])
+            vis_ax.set_xlim(times[0], times[-1])
             if vis_data:
                 vmin, vmax = min(vis_data), max(vis_data)
                 if vmin == vmax:
@@ -294,10 +330,8 @@ class DashboardApp(tk.Tk):
                 vis_ax.set_ylim(max(0.0, vmin - 0.05), min(1.0, vmax + 0.05))
             else:
                 vis_ax.set_ylim(0, 1)
+            vis_ax.set_ylabel("Visibility")
             vis_ax.grid(True, alpha=0.2)
-            vis_ax.plot(times[: len(vis_data)], vis_data, label="Visibility", color="#00a6ff")
-            qber_ax = vis_ax.twinx()
-            qber_ax.set_ylabel("QBER")
             if qber_data:
                 qmin, qmax = min(qber_data), max(qber_data)
                 if qmin == qmax:
@@ -306,12 +340,12 @@ class DashboardApp(tk.Tk):
                 qber_ax.set_ylim(max(0.0, qmin - 0.05), min(1.0, qmax + 0.05))
             else:
                 qber_ax.set_ylim(0, 1)
-            qber_ax.plot(times[: len(qber_data)], qber_data, label="QBER", color="#ff006e")
+            qber_ax.set_xlim(times[0], times[-1])
+            qber_ax.set_ylabel("QBER")
             lines, labels = vis_ax.get_legend_handles_labels()
             lines2, labels2 = qber_ax.get_legend_handles_labels()
             vis_ax.legend(lines + lines2, labels + labels2, fontsize=8, loc="upper right")
 
-        self.figure.tight_layout()
         self.canvas.draw_idle()
 
     def _ensure_axes(self, layout: tuple[str, ...]):
@@ -322,6 +356,7 @@ class DashboardApp(tk.Tk):
         self.ax_singles = None
         self.ax_coinc = None
         self.ax_metrics = None
+        self.ax_metrics_secondary = None
         count = len(layout)
         sharex = None
         for idx, name in enumerate(layout):
@@ -334,6 +369,11 @@ class DashboardApp(tk.Tk):
                 self.ax_coinc = ax
             elif name == "metrics":
                 self.ax_metrics = ax
+                self.ax_metrics_secondary = ax.twinx()
+                self._lines["visibility"] = None
+                self._lines["qber"] = None
+        self._lines["singles"] = {}
+        self._lines["coincidences"] = {}
         self.figure.tight_layout()
 
     def _refresh_histogram(self):
