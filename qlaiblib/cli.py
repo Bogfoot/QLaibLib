@@ -18,6 +18,7 @@ from . import (
     specs_from_delays,
     DEFAULT_SPECS,
 )
+from .acquisition.file_replay import FileReplayBackend
 from .live.controller import LiveAcquisition
 from .metrics import REGISTRY
 from .plotting import static as static_plots
@@ -40,7 +41,9 @@ def _group_metrics(values):
     return [(name, vals) for name, vals in groups if vals]
 
 
-def _create_backend(mock: bool, exposure: float):
+def _create_backend(mock: bool, exposure: float, *, demo_file: Path | None = None, bucket_seconds: float | None = None):
+    if demo_file:
+        return FileReplayBackend(demo_file, exposure_sec=exposure, bucket_seconds=bucket_seconds)
     if mock:
         return MockBackend(exposure_sec=exposure)
     return QuTAGBackend(exposure_sec=exposure)
@@ -87,10 +90,12 @@ def count(
     exposure: float = typer.Option(1.0, help="Exposure / integration time per chunk."),
     plot: bool = typer.Option(False, help="Show a Matplotlib bar plot of singles."),
     mock: bool = typer.Option(False, help="Use mock backend instead of QuTAG."),
+    demo_file: Path | None = typer.Option(None, help="Replay this BIN file instead of live hardware."),
+    bucket_seconds: float | None = typer.Option(None, help="Bucket duration (s) when replaying a file."),
 ):
     """Capture a single chunk and print singles per channel."""
 
-    backend = _create_backend(mock, exposure)
+    backend = _create_backend(mock, exposure, demo_file=demo_file, bucket_seconds=bucket_seconds)
     batch = backend.capture(exposure)
     typer.echo("Channel\tCounts")
     for ch in sorted(batch.singles):
@@ -111,10 +116,12 @@ def coincide(
     delay_start_ps: float = typer.Option(-8_000, help="Delay scan range start (ps)."),
     delay_end_ps: float = typer.Option(8_000, help="Delay scan range end (ps)."),
     delay_step_ps: float = typer.Option(50.0, help="Delay scan step (ps)."),
+    demo_file: Path | None = typer.Option(None, help="Replay BIN file instead of hardware."),
+    bucket_seconds: float | None = typer.Option(None, help="Bucket duration (s) for replay."),
 ):
     """Measure coincidences + metrics once."""
 
-    backend = _create_backend(mock, exposure)
+    backend = _create_backend(mock, exposure, demo_file=demo_file, bucket_seconds=bucket_seconds)
     delays = _calibrate(
         backend,
         window_ps=window_ps,
@@ -149,15 +156,18 @@ def coincide(
 @app.command()
 def live(
     exposure: float = typer.Option(1.0, help="Exposure / integration time per chunk."),
-    window_ps: float = typer.Option(200.0, help="Coincidence window in picoseconds."),
+    window_ps: float = typer.Option(250.0, help="Coincidence window in picoseconds."),
     mock: bool = typer.Option(False, help="Use mock backend."),
-    delay_start_ps: float = typer.Option(-8_000, help="Delay scan range start (ps)."),
-    delay_end_ps: float = typer.Option(8_000, help="Delay scan range end (ps)."),
-    delay_step_ps: float = typer.Option(50.0, help="Delay scan step (ps)."),
+    delay_start_ps: float = typer.Option(-20_000, help="Delay scan range start (ps)."),
+    delay_end_ps: float = typer.Option(20_000, help="Delay scan range end (ps)."),
+    delay_step_ps: float = typer.Option(10.0, help="Delay scan step (ps)."),
+    demo_file: Path | None = typer.Option(None, help="Replay this BIN file instead of live hardware."),
+    bucket_seconds: float | None = typer.Option(None, help="Bucket duration (s) in demo mode."),
+    history_points: int = typer.Option(500, help="Number of points to retain in time series."),
 ):
     """Launch the Tkinter live dashboard."""
 
-    backend = _create_backend(mock, exposure)
+    backend = _create_backend(mock, exposure, demo_file=demo_file, bucket_seconds=bucket_seconds)
     delays = _calibrate(
         backend,
         window_ps=window_ps,
@@ -171,17 +181,17 @@ def live(
     )
     pipeline = CoincidencePipeline(specs)
     controller = LiveAcquisition(backend, pipeline, exposure_sec=exposure)
-    run_dashboard(controller)
+    run_dashboard(controller, history_points=history_points)
 
 
 @app.command()
 def replay(
     path: Path = typer.Argument(..., exists=True, readable=True, help="Path to BIN file recorded with QuTAG."),
-    window_ps: float = typer.Option(200.0, help="Coincidence window in picoseconds."),
+    window_ps: float = typer.Option(250.0, help="Coincidence window in picoseconds."),
     plot: bool = typer.Option(False, help="Plot coincidences + metrics."),
-    delay_start_ps: float = typer.Option(-8_000, help="Delay scan range start (ps)."),
-    delay_end_ps: float = typer.Option(8_000, help="Delay scan range end (ps)."),
-    delay_step_ps: float = typer.Option(50.0, help="Delay scan step (ps)."),
+    delay_start_ps: float = typer.Option(-20_000, help="Delay scan range start (ps)."),
+    delay_end_ps: float = typer.Option(20_000, help="Delay scan range end (ps)."),
+    delay_step_ps: float = typer.Option(10.0, help="Delay scan step (ps)."),
     timeseries: bool = typer.Option(False, help="Plot singles + coincidences time-series."),
     timeseries_chunk: float | None = typer.Option(None, help="Chunk size (s) for time-series plot (default 1 s, or exposure time if <=0)."),
     bucket_seconds: float | None = typer.Option(None, help="Bucket duration (s) to use when ingesting the BIN (default 1 s, or exposure)."),
@@ -236,9 +246,7 @@ def replay(
         plt.tight_layout()
 
         if timeseries:
-            chunk = timeseries_chunk
-            if chunk is None or chunk <= 0:
-                chunk = float(batch.metadata.get("exposure_sec", 1.0))
+            chunk = timeseries_chunk if timeseries_chunk and timeseries_chunk > 0 else None
             ts = ts_plots.compute_timeseries(batch, chunk, specs)
             fig_ts = plt.figure(figsize=(12, 9))
             gs_ts = fig_ts.add_gridspec(3, 2, height_ratios=[1, 1, 1])

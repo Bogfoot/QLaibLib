@@ -16,10 +16,10 @@ a browser. Ready and lab friendly. :)
   a registry so new observables can be added declaratively.
 - **Plotting**: Matplotlib helpers for singles, coincidences, and metric
   summaries; reusable both in scripts and in the dashboard.
-- **Live dashboard**: Tkinter GUI with configurable exposure time that streams
-  singles, coincidences, and metrics in real time. Includes a settings tab to
-  toggle channels/pairs, manually override delays, and compute per-pair
-  histograms without leaving the app.
+- **Live dashboard**: Tkinter GUI with tabs for live time-series plots, delay
+  histograms, settings, and data/export tools. Supports keyboard shortcuts (1–5)
+  to switch plot layouts, per-pair contrast/heralding stats, histogram auto-refresh,
+  and a history buffer (default 500 points) with CSV/raw BIN export buttons.
 - **CLI**: `qlaib` entry point with `count`, `coincide`, and `live` commands.
 
 ## Installation
@@ -78,6 +78,9 @@ qlaib replay Data/sample_capture.bin --use-default-specs --plot
 
 # Ingest BIN file using the actual exposure time per bucket (e.g., 0.4 s)
 qlaib replay Data/sample_capture.bin --bucket-seconds 0.4 --plot --timeseries
+
+# Run the live dashboard in demo mode, replaying a BIN capture instead of hardware
+qlaib live --demo-file Data/sample_capture.bin --bucket-seconds 0.4 --history-points 800
 
 # Develop without hardware using the synthetic backend
 qlaib live --mock --exposure 0.5

@@ -60,6 +60,15 @@ class QuTAGBackend(AcquisitionBackend):
         batch.metadata.setdefault("captured_at", timing.utc_now().isoformat())
         return batch
 
+    def record_raw(self, path: str, duration: float) -> None:
+        duration = max(0.1, duration)
+        with self._lock:
+            self._driver.writeTimestamps(path, self._driver.FILEFORMAT_BINARY)
+            try:
+                time.sleep(duration)
+            finally:
+                self._driver.writeTimestamps("", self._driver.FILEFORMAT_NONE)
+
     def device_params(self):  # pragma: no cover - thin wrapper
         return self._driver.getDeviceParams()
 

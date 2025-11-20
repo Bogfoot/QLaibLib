@@ -87,8 +87,12 @@ def plot_timeseries(
         coincid_ax.legend(ncol=4, fontsize=8)
         coincid_ax.grid(True, alpha=0.2)
 
+    if metric_axes:
+        for ax in metric_axes:
+            ax.set_visible(False)
     if metric_groups and metric_axes:
         for ax, (group_name, names) in zip(metric_axes, metric_groups):
+            ax.set_visible(True)
             for name in names:
                 values = ts.metrics.get(name)
                 if values is None:

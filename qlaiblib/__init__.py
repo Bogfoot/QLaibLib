@@ -14,6 +14,7 @@ from .data.models import AcquisitionBatch, CoincidenceSpec
 from .live.controller import LiveAcquisition
 from .live.tk_dashboard import run_dashboard
 from .metrics import REGISTRY
+from .acquisition.file_replay import FileReplayBackend
 
 __all__ = [
     "QuTAGBackend",
@@ -23,6 +24,7 @@ __all__ = [
     "AcquisitionBatch",
     "DEFAULT_REF_PAIRS",
     "DEFAULT_CROSS_PAIRS",
+    "FileReplayBackend",
     "DEFAULT_PAIRS",
     "GHZ_TRIPLETS",
     "DEFAULT_SPECS",

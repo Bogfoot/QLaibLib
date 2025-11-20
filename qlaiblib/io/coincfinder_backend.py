@@ -49,10 +49,9 @@ def read_file(path: str | Path, *, bucket_seconds: float | None = None) -> Acqui
     read_fn = getattr(module, "read_file_auto", None)
     if read_fn is None:
         raise RuntimeError("coincfinder module is missing read_file_auto")
-    code = getattr(read_fn, "__code__", None)
-    if code is not None and code.co_argcount >= 2:
+    try:
         singles_map, duration_sec = read_fn(str(path), target_bucket)
-    else:
+    except TypeError:
         singles_map, duration_sec = read_fn(str(path))
 
     singles: Dict[int, np.ndarray] = {
