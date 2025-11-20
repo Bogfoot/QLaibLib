@@ -322,6 +322,8 @@ class DashboardApp(tk.Tk):
             ax.set_ylabel("Singles")
             ax.legend(ncol=4, fontsize=7)
             ax.grid(True, alpha=0.2)
+            ax.margins(x=0.02)
+            ax.tick_params(axis="y", labelrotation=45)
 
         if self.ax_coinc is not None and "coincidences" in layout:
             ax = self.ax_coinc
@@ -349,6 +351,8 @@ class DashboardApp(tk.Tk):
             ax.set_ylabel("Coincidences")
             ax.legend(ncol=2, fontsize=7)
             ax.grid(True, alpha=0.2)
+            ax.margins(x=0.02)
+            ax.tick_params(axis="y", labelrotation=45)
 
         if self.ax_metrics is not None and "metrics" in layout:
             vis_ax = self.ax_metrics
@@ -363,13 +367,19 @@ class DashboardApp(tk.Tk):
             if vis_data:
                 ts, ys = self._downsample_series(times, vis_data)
                 self._lines["visibility"].set_data(ts, ys)
+                vis_label = f"Visibility ({ys[-1]:.3f})" if ys else "Visibility"
             else:
                 self._lines["visibility"].set_data([], [])
+                vis_label = "Visibility"
+            self._lines["visibility"].set_label(vis_label)
             if qber_data:
                 ts, ys = self._downsample_series(times, qber_data)
                 self._lines["qber"].set_data(ts, ys)
+                qber_label = f"QBER ({ys[-1]:.3f})" if ys else "QBER"
             else:
                 self._lines["qber"].set_data([], [])
+                qber_label = "QBER"
+            self._lines["qber"].set_label(qber_label)
             vis_ax.set_xlim(times[0], times[-1])
             if vis_data:
                 vmin, vmax = min(vis_data), max(vis_data)
@@ -394,6 +404,10 @@ class DashboardApp(tk.Tk):
             lines, labels = vis_ax.get_legend_handles_labels()
             lines2, labels2 = qber_ax.get_legend_handles_labels()
             vis_ax.legend(lines + lines2, labels + labels2, fontsize=8, loc="upper right")
+            vis_ax.margins(x=0.02)
+            qber_ax.margins(x=0.02)
+            vis_ax.tick_params(axis="y", labelrotation=45)
+            qber_ax.tick_params(axis="y", labelrotation=45)
 
         if self.ax_chsh_counts is not None and "chsh_counts" in layout:
             ax = self.ax_chsh_counts
@@ -415,6 +429,8 @@ class DashboardApp(tk.Tk):
             ax.set_ylabel("Coincidences")
             ax.grid(True, alpha=0.2)
             ax.legend(ncol=4, fontsize=7)
+            ax.margins(x=0.02)
+            ax.tick_params(axis="y", labelrotation=45)
 
         if self.ax_chsh_s is not None and "chsh_s" in layout:
             ax = self.ax_chsh_s
@@ -440,6 +456,10 @@ class DashboardApp(tk.Tk):
                     sigma_arr = np.asarray(sigmas[-len(data):], dtype=float)
                     sigma_arr = sigma_arr[idx]
                     yerr = sigma_arr
+                label = f"CHSH S ({ys[-1]:.3f}"
+                if yerr is not None and len(yerr):
+                    label += f"±{yerr[-1]:.3f}"
+                label += ")"
                 self._chsh_errorbar = ax.errorbar(
                     ts,
                     ys,
@@ -448,7 +468,7 @@ class DashboardApp(tk.Tk):
                     color=color,
                     ecolor=color,
                     capsize=3,
-                    label="CHSH S",
+                    label=label,
                 )
             else:
                 if self._chsh_errorbar:
@@ -459,9 +479,11 @@ class DashboardApp(tk.Tk):
                     barcol.remove()
                     self._chsh_errorbar = None
                 ax.set_ylim(-0.1, 0.1)
-            ax.set_ylabel("CHSH S")
+                ax.set_ylabel("CHSH S")
             ax.grid(True, alpha=0.2)
             ax.legend(loc="upper right")
+            ax.margins(x=0.02)
+            ax.tick_params(axis="y", labelrotation=45)
 
         self.canvas.draw_idle()
 
@@ -503,6 +525,7 @@ class DashboardApp(tk.Tk):
         self._chsh_errorbar = None
         self._chsh_fill = None
         self.figure.tight_layout()
+        self.figure.subplots_adjust(left=0.12, right=0.98)
 
     def _downsample_series(self, times: list[float], data: list[float], limit: int | None = None, return_indices: bool = False):
         if not data:
