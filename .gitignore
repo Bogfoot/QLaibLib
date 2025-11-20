@@ -42,6 +42,7 @@ plotter_settings.json
 libtdcbase.so
 EPC/
 coincfinder.cp312-win_amd64.pyd
+Makefile
 
 # Legacy/legacy scripts (keep ignored unless explicitly added)
 Client.py
