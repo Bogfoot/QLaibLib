@@ -31,6 +31,7 @@ PLOT_MODES = {
     "6": "chsh_full",
 }
 
+BASE_COINCIDENCE_LABELS = ["HH", "VV", "HV", "VH", "DD", "AA", "DA", "AD"]
 CHSH_LABELS = [
     "HH", "HV", "VH", "VV",
     "HD", "HA", "VD", "VA",
@@ -128,6 +129,7 @@ class DashboardApp(tk.Tk):
             "chsh_s": None,
         }
         self._chsh_fill = None
+        self._chsh_count_lines: dict[str, any] = {}
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.plot_tab)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         self.figure.tight_layout()
@@ -306,6 +308,8 @@ class DashboardApp(tk.Tk):
         if self.ax_coinc is not None and "coincidences" in layout:
             ax = self.ax_coinc
             for label, values in self.history.coincidences.items():
+                if label not in BASE_COINCIDENCE_LABELS:
+                    continue
                 data = list(values)
                 line = self._lines["coincidences"].get(label)
                 if line is None:
@@ -374,13 +378,23 @@ class DashboardApp(tk.Tk):
 
         if self.ax_chsh_counts is not None and "chsh_counts" in layout:
             ax = self.ax_chsh_counts
-            ax.clear()
-            values = [self._last_counts.get(lbl, 0) for lbl in CHSH_LABELS]
-            ax.bar(range(len(CHSH_LABELS)), values, color="#577590")
-            ax.set_xticks(range(len(CHSH_LABELS)))
-            ax.set_xticklabels(CHSH_LABELS, rotation=45, ha="right", fontsize=8)
-            ax.set_ylabel("Counts")
-            ax.grid(axis="y", alpha=0.2)
+            for label in CHSH_LABELS:
+                series = self.history.coincidences.get(label)
+                line = self._chsh_count_lines.get(label)
+                if line is None:
+                    (line,) = ax.plot([], [], label=label)
+                    self._chsh_count_lines[label] = line
+                if series:
+                    ts, ys = self._downsample_series(times, list(series))
+                    line.set_data(ts, ys)
+                else:
+                    line.set_data([], [])
+            ax.set_xlim(times[0], times[-1])
+            ax.relim()
+            ax.autoscale_view(True, True, True)
+            ax.set_ylabel("Coincidences")
+            ax.grid(True, alpha=0.2)
+            ax.legend(ncol=4, fontsize=7)
 
         if self.ax_chsh_s is not None and "chsh_s" in layout:
             ax = self.ax_chsh_s
@@ -445,6 +459,7 @@ class DashboardApp(tk.Tk):
                 self._lines["qber"] = None
             elif name == "chsh_counts":
                 self.ax_chsh_counts = ax
+                self._chsh_count_lines = {}
             elif name == "chsh_s":
                 self.ax_chsh_s = ax
                 self._lines["chsh_s"] = None
