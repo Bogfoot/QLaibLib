@@ -39,6 +39,21 @@ CHSH_LABELS = [
     "DD", "DA", "AD", "AA",
 ]
 
+COLOR_PALETTE = [
+    "#FF595E",
+    "#FFCA3A",
+    "#8AC926",
+    "#1982C4",
+    "#6A4C93",
+    "#FF924C",
+    "#9D4EDD",
+    "#2EC4B6",
+    "#E71D36",
+    "#F15BB5",
+    "#00BBF9",
+    "#00F5D4",
+]
+
 
 class DashboardApp(tk.Tk):
     def __init__(self, controller: LiveAcquisition, history_points: int = 500):
@@ -70,6 +85,8 @@ class DashboardApp(tk.Tk):
             var.trace_add("write", lambda *_args, ch=ch: self._update_delay_setting(ch))
         self.executor = ThreadPoolExecutor(max_workers=2)
         self._pending_histogram = None
+        self._color_cache = {"singles": {}, "coincidences": {}, "chsh_counts": {}, "chsh": {}}
+        self._chsh_errorbar = None
 
         self._build_ui()
         self._running = False
@@ -126,9 +143,9 @@ class DashboardApp(tk.Tk):
             "coincidences": {},
             "visibility": None,
             "qber": None,
-            "chsh_s": None,
         }
         self._chsh_fill = None
+        self._chsh_errorbar = None
         self._chsh_count_lines: dict[str, any] = {}
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.plot_tab)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
@@ -291,7 +308,8 @@ class DashboardApp(tk.Tk):
                 data = list(values)
                 line = self._lines["singles"].get(ch)
                 if line is None:
-                    (line,) = ax.plot([], [], label=f"Ch {ch}")
+                    color = self._color_for("singles", ch)
+                    (line,) = ax.plot([], [], label=f"Ch {ch}", color=color)
                     self._lines["singles"][ch] = line
                 if data:
                     ts, ys = self._downsample_series(times, data)
@@ -313,7 +331,8 @@ class DashboardApp(tk.Tk):
                 data = list(values)
                 line = self._lines["coincidences"].get(label)
                 if line is None:
-                    (line,) = ax.plot([], [], label=label)
+                    color = self._color_for("coincidences", label)
+                    (line,) = ax.plot([], [], label=label, color=color)
                     self._lines["coincidences"][label] = line
                 contrast = self._contrast_for_label(label)
                 heralding = self._heralding_for_label(label)
@@ -382,7 +401,8 @@ class DashboardApp(tk.Tk):
                 series = self.history.coincidences.get(label)
                 line = self._chsh_count_lines.get(label)
                 if line is None:
-                    (line,) = ax.plot([], [], label=label)
+                    color = self._color_for("chsh_counts", label)
+                    (line,) = ax.plot([], [], label=label, color=color)
                     self._chsh_count_lines[label] = line
                 if series:
                     ts, ys = self._downsample_series(times, list(series))
@@ -400,30 +420,44 @@ class DashboardApp(tk.Tk):
             ax = self.ax_chsh_s
             data = list(self.history.metrics.get("CHSH_S", []))
             sigmas = list(self.history.metric_sigmas.get("CHSH_S", []))
-            if self._lines["chsh_s"] is None:
-                (self._lines["chsh_s"],) = ax.plot([], [], label="CHSH S", color="#ffbe0b")
             if data:
                 ts, ys, idx = self._downsample_series(times, data, return_indices=True)
-                self._lines["chsh_s"].set_data(ts, ys)
-                ax.set_xlim(ts[0], ts[-1])
+                if self._chsh_errorbar:
+                    line, caplines, barcol = self._chsh_errorbar
+                    line.remove()
+                    for cap in caplines:
+                        cap.remove()
+                    barcol.remove()
+                color = self._color_for("chsh", "S")
+                yerr = None
                 ymin, ymax = min(ys), max(ys)
                 if ymin == ymax:
                     ymin -= 0.05
                     ymax += 0.05
                 ax.set_ylim(ymin - 0.05, ymax + 0.05)
+                ax.set_xlim(ts[0], ts[-1])
                 if sigmas and len(sigmas) >= len(data):
                     sigma_arr = np.asarray(sigmas[-len(data):], dtype=float)
                     sigma_arr = sigma_arr[idx]
-                    lower = np.array(ys) - sigma_arr
-                    upper = np.array(ys) + sigma_arr
-                    if self._chsh_fill is not None:
-                        self._chsh_fill.remove()
-                    self._chsh_fill = ax.fill_between(ts, lower, upper, color="#ffbe0b", alpha=0.2)
+                    yerr = sigma_arr
+                self._chsh_errorbar = ax.errorbar(
+                    ts,
+                    ys,
+                    yerr=yerr,
+                    fmt="-o",
+                    color=color,
+                    ecolor=color,
+                    capsize=3,
+                    label="CHSH S",
+                )
             else:
-                self._lines["chsh_s"].set_data([], [])
-                if self._chsh_fill is not None:
-                    self._chsh_fill.remove()
-                    self._chsh_fill = None
+                if self._chsh_errorbar:
+                    line, caplines, barcol = self._chsh_errorbar
+                    line.remove()
+                    for cap in caplines:
+                        cap.remove()
+                    barcol.remove()
+                    self._chsh_errorbar = None
                 ax.set_ylim(-0.1, 0.1)
             ax.set_ylabel("CHSH S")
             ax.grid(True, alpha=0.2)
@@ -462,12 +496,11 @@ class DashboardApp(tk.Tk):
                 self._chsh_count_lines = {}
             elif name == "chsh_s":
                 self.ax_chsh_s = ax
-                self._lines["chsh_s"] = None
         self._lines["singles"] = {}
         self._lines["coincidences"] = {}
         self._lines["visibility"] = None
         self._lines["qber"] = None
-        self._lines["chsh_s"] = None
+        self._chsh_errorbar = None
         self._chsh_fill = None
         self.figure.tight_layout()
 
@@ -486,6 +519,12 @@ class DashboardApp(tk.Tk):
         if return_indices:
             return sampled_times.tolist(), sampled_values.tolist(), idx
         return sampled_times.tolist(), sampled_values.tolist()
+
+    def _color_for(self, kind: str, key) -> str:
+        cache = self._color_cache.setdefault(kind, {})
+        if key not in cache:
+            cache[key] = COLOR_PALETTE[len(cache) % len(COLOR_PALETTE)]
+        return cache[key]
 
     def _refresh_histogram(self):
         if not self._latest_flatten or self._pending_histogram:
