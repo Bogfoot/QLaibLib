@@ -54,6 +54,9 @@ COLOR_PALETTE = [
     "#00F5D4",
 ]
 
+COLOR_BG = "#474747"
+COLOR_GRID = "#ff646f6d"
+LEGEND_KW = {"facecolor": COLOR_BG, "edgecolor": "white", "labelcolor": "white"}
 
 class DashboardApp(tk.Tk):
     def __init__(self, controller: LiveAcquisition, history_points: int = 500):
@@ -131,6 +134,7 @@ class DashboardApp(tk.Tk):
         ttk.Label(controls, text="Timeseries view (keys 1-6)").pack(side=tk.RIGHT, padx=8)
 
         self.figure = plt.Figure(figsize=(10, 7), dpi=100)
+        self.figure.patch.set_facecolor(COLOR_BG)
         self.ax_singles = None
         self.ax_coinc = None
         self.ax_metrics = None
@@ -320,10 +324,10 @@ class DashboardApp(tk.Tk):
             ax.relim()
             ax.autoscale_view(True, True, True)
             ax.set_ylabel("Singles")
-            ax.legend(ncol=4, fontsize=7)
-            ax.grid(True, alpha=0.2)
+            ax.legend(ncol=4, fontsize=7, **LEGEND_KW)
+            ax.grid(True, color=COLOR_GRID, alpha=0.3)
             ax.margins(x=0.02)
-            ax.tick_params(axis="y", labelrotation=45)
+            self._style_axis(ax)
 
         if self.ax_coinc is not None and "coincidences" in layout:
             ax = self.ax_coinc
@@ -349,10 +353,10 @@ class DashboardApp(tk.Tk):
             ax.relim()
             ax.autoscale_view(True, True, True)
             ax.set_ylabel("Coincidences")
-            ax.legend(ncol=2, fontsize=7)
-            ax.grid(True, alpha=0.2)
+            ax.legend(ncol=2, fontsize=7, **LEGEND_KW)
+            ax.grid(True, color=COLOR_GRID, alpha=0.3)
             ax.margins(x=0.02)
-            ax.tick_params(axis="y", labelrotation=45)
+            self._style_axis(ax)
 
         if self.ax_metrics is not None and "metrics" in layout:
             vis_ax = self.ax_metrics
@@ -390,7 +394,7 @@ class DashboardApp(tk.Tk):
             else:
                 vis_ax.set_ylim(0, 1)
             vis_ax.set_ylabel("Visibility")
-            vis_ax.grid(True, alpha=0.2)
+            vis_ax.grid(True, color=COLOR_GRID, alpha=0.3)
             if qber_data:
                 qmin, qmax = min(qber_data), max(qber_data)
                 if qmin == qmax:
@@ -403,11 +407,11 @@ class DashboardApp(tk.Tk):
             qber_ax.set_ylabel("QBER")
             lines, labels = vis_ax.get_legend_handles_labels()
             lines2, labels2 = qber_ax.get_legend_handles_labels()
-            vis_ax.legend(lines + lines2, labels + labels2, fontsize=8, loc="upper right")
+            vis_ax.legend(lines + lines2, labels + labels2, fontsize=8, loc="upper right", **LEGEND_KW)
             vis_ax.margins(x=0.02)
             qber_ax.margins(x=0.02)
-            vis_ax.tick_params(axis="y", labelrotation=45)
-            qber_ax.tick_params(axis="y", labelrotation=45)
+            self._style_axis(vis_ax)
+            self._style_axis(qber_ax)
 
         if self.ax_chsh_counts is not None and "chsh_counts" in layout:
             ax = self.ax_chsh_counts
@@ -427,10 +431,10 @@ class DashboardApp(tk.Tk):
             ax.relim()
             ax.autoscale_view(True, True, True)
             ax.set_ylabel("Coincidences")
-            ax.grid(True, alpha=0.2)
-            ax.legend(ncol=4, fontsize=7)
+            ax.grid(True, color=COLOR_GRID, alpha=0.3)
+            ax.legend(ncol=4, fontsize=7, **LEGEND_KW)
             ax.margins(x=0.02)
-            ax.tick_params(axis="y", labelrotation=45)
+            self._style_axis(ax)
 
         if self.ax_chsh_s is not None and "chsh_s" in layout:
             ax = self.ax_chsh_s
@@ -475,6 +479,8 @@ class DashboardApp(tk.Tk):
                     capsize=3,
                     label=label,
                 )
+                handle = self._chsh_errorbar[0]
+                handle.set_label(label)
             else:
                 if self._chsh_errorbar:
                     line, caplines, barcols = self._chsh_errorbar
@@ -490,12 +496,12 @@ class DashboardApp(tk.Tk):
                     self._chsh_errorbar = None
                 ax.set_ylim(-0.1, 0.1)
             ax.set_ylabel("CHSH S")
-            ax.grid(True, alpha=0.2)
+            ax.grid(True, color=COLOR_GRID, alpha=0.3)
             if self._chsh_errorbar:
                 handle = self._chsh_errorbar[0]
-                ax.legend(handles=[handle], labels=[handle.get_label()], loc="upper right")
+                ax.legend(handles=[handle], labels=[handle.get_label()], loc="upper right", **LEGEND_KW)
             ax.margins(x=0.02)
-            ax.tick_params(axis="y", labelrotation=45)
+            self._style_axis(ax)
 
         self.canvas.draw_idle()
 
@@ -516,6 +522,7 @@ class DashboardApp(tk.Tk):
             ax = self.figure.add_subplot(count, 1, idx + 1, sharex=sharex)
             if sharex is None:
                 sharex = ax
+            ax.set_facecolor(COLOR_BG)
             if name == "singles":
                 self.ax_singles = ax
             elif name == "coincidences":
@@ -570,6 +577,16 @@ class DashboardApp(tk.Tk):
             ax.set_xlim(t - 1e-6, t + 1e-6)
         else:
             ax.set_xlim(times[0], times[-1])
+
+    def _style_axis(self, ax, rotate_y=True):
+        ax.set_facecolor(COLOR_BG)
+        ax.tick_params(axis="x", colors="white")
+        ax.tick_params(axis="y", colors="white", labelrotation=45 if rotate_y else 0)
+        ax.xaxis.label.set_color("white")
+        ax.yaxis.label.set_color("white")
+        ax.title.set_color("white")
+        for spine in ax.spines.values():
+            spine.set_color("white")
 
     def _refresh_histogram(self):
         if not self._latest_flatten or self._pending_histogram:
