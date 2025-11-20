@@ -439,11 +439,16 @@ class DashboardApp(tk.Tk):
             if data:
                 ts, ys, idx = self._downsample_series(times, data, return_indices=True)
                 if self._chsh_errorbar:
-                    line, caplines, barcol = self._chsh_errorbar
+                    line, caplines, barcols = self._chsh_errorbar
                     line.remove()
                     for cap in caplines:
                         cap.remove()
-                    barcol.remove()
+                    if isinstance(barcols, (list, tuple)):
+                        for col in barcols:
+                            if hasattr(col, "remove"):
+                                col.remove()
+                    elif hasattr(barcols, "remove"):
+                        barcols.remove()
                 color = self._color_for("chsh", "S")
                 yerr = None
                 ymin, ymax = min(ys), max(ys)
@@ -472,11 +477,16 @@ class DashboardApp(tk.Tk):
                 )
             else:
                 if self._chsh_errorbar:
-                    line, caplines, barcol = self._chsh_errorbar
+                    line, caplines, barcols = self._chsh_errorbar
                     line.remove()
                     for cap in caplines:
                         cap.remove()
-                    barcol.remove()
+                    if isinstance(barcols, (list, tuple)):
+                        for col in barcols:
+                            if hasattr(col, "remove"):
+                                col.remove()
+                    elif hasattr(barcols, "remove"):
+                        barcols.remove()
                     self._chsh_errorbar = None
                 ax.set_ylim(-0.1, 0.1)
                 ax.set_ylabel("CHSH S")
