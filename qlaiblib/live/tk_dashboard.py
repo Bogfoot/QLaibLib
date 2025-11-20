@@ -283,14 +283,30 @@ class DashboardApp(tk.Tk):
         if self.ax_metrics is not None and "metrics" in layout:
             vis_ax = self.ax_metrics
             vis_ax.clear()
+            vis_data = list(self.history.metrics.get("visibility", []))
+            qber_data = list(self.history.metrics.get("QBER_total", []))
             vis_ax.set_ylabel("Visibility")
-            vis_ax.set_ylim(0, 1)
+            if vis_data:
+                vmin, vmax = min(vis_data), max(vis_data)
+                if vmin == vmax:
+                    vmin -= 0.05
+                    vmax += 0.05
+                vis_ax.set_ylim(max(0.0, vmin - 0.05), min(1.0, vmax + 0.05))
+            else:
+                vis_ax.set_ylim(0, 1)
             vis_ax.grid(True, alpha=0.2)
-            vis_ax.plot(times[: len(self.history.metrics.get("visibility", []))], list(self.history.metrics.get("visibility", [])), label="Visibility", color="#00a6ff")
+            vis_ax.plot(times[: len(vis_data)], vis_data, label="Visibility", color="#00a6ff")
             qber_ax = vis_ax.twinx()
             qber_ax.set_ylabel("QBER")
-            qber_ax.set_ylim(0, 1)
-            qber_ax.plot(times[: len(self.history.metrics.get("QBER_total", []))], list(self.history.metrics.get("QBER_total", [])), label="QBER", color="#ff006e")
+            if qber_data:
+                qmin, qmax = min(qber_data), max(qber_data)
+                if qmin == qmax:
+                    qmin -= 0.05
+                    qmax += 0.05
+                qber_ax.set_ylim(max(0.0, qmin - 0.05), min(1.0, qmax + 0.05))
+            else:
+                qber_ax.set_ylim(0, 1)
+            qber_ax.plot(times[: len(qber_data)], qber_data, label="QBER", color="#ff006e")
             lines, labels = vis_ax.get_legend_handles_labels()
             lines2, labels2 = qber_ax.get_legend_handles_labels()
             vis_ax.legend(lines + lines2, labels + labels2, fontsize=8, loc="upper right")
