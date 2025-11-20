@@ -316,7 +316,7 @@ class DashboardApp(tk.Tk):
                     line.set_data(ts, ys)
                 else:
                     line.set_data([], [])
-            ax.set_xlim(times[0], times[-1])
+            self._set_xlimits(ax, times)
             ax.relim()
             ax.autoscale_view(True, True, True)
             ax.set_ylabel("Singles")
@@ -345,7 +345,7 @@ class DashboardApp(tk.Tk):
                     line.set_data(ts, ys)
                 else:
                     line.set_data([], [])
-            ax.set_xlim(times[0], times[-1])
+            self._set_xlimits(ax, times)
             ax.relim()
             ax.autoscale_view(True, True, True)
             ax.set_ylabel("Coincidences")
@@ -380,7 +380,7 @@ class DashboardApp(tk.Tk):
                 self._lines["qber"].set_data([], [])
                 qber_label = "QBER"
             self._lines["qber"].set_label(qber_label)
-            vis_ax.set_xlim(times[0], times[-1])
+            self._set_xlimits(vis_ax, times)
             if vis_data:
                 vmin, vmax = min(vis_data), max(vis_data)
                 if vmin == vmax:
@@ -399,7 +399,7 @@ class DashboardApp(tk.Tk):
                 qber_ax.set_ylim(max(0.0, qmin - 0.05), min(1.0, qmax + 0.05))
             else:
                 qber_ax.set_ylim(0, 1)
-            qber_ax.set_xlim(times[0], times[-1])
+            self._set_xlimits(qber_ax, times)
             qber_ax.set_ylabel("QBER")
             lines, labels = vis_ax.get_legend_handles_labels()
             lines2, labels2 = qber_ax.get_legend_handles_labels()
@@ -423,7 +423,7 @@ class DashboardApp(tk.Tk):
                     line.set_data(ts, ys)
                 else:
                     line.set_data([], [])
-            ax.set_xlim(times[0], times[-1])
+            self._set_xlimits(ax, times)
             ax.relim()
             ax.autoscale_view(True, True, True)
             ax.set_ylabel("Coincidences")
@@ -456,7 +456,7 @@ class DashboardApp(tk.Tk):
                     ymin -= 0.05
                     ymax += 0.05
                 ax.set_ylim(ymin - 0.05, ymax + 0.05)
-                ax.set_xlim(ts[0], ts[-1])
+                self._set_xlimits(ax, ts)
                 if sigmas and len(sigmas) >= len(data):
                     sigma_arr = np.asarray(sigmas[-len(data):], dtype=float)
                     sigma_arr = sigma_arr[idx]
@@ -489,9 +489,11 @@ class DashboardApp(tk.Tk):
                         barcols.remove()
                     self._chsh_errorbar = None
                 ax.set_ylim(-0.1, 0.1)
-                ax.set_ylabel("CHSH S")
+            ax.set_ylabel("CHSH S")
             ax.grid(True, alpha=0.2)
-            ax.legend(loc="upper right")
+            if self._chsh_errorbar:
+                handle = self._chsh_errorbar[0]
+                ax.legend(handles=[handle], labels=[handle.get_label()], loc="upper right")
             ax.margins(x=0.02)
             ax.tick_params(axis="y", labelrotation=45)
 
@@ -558,6 +560,16 @@ class DashboardApp(tk.Tk):
         if key not in cache:
             cache[key] = COLOR_PALETTE[len(cache) % len(COLOR_PALETTE)]
         return cache[key]
+
+    @staticmethod
+    def _set_xlimits(ax, times):
+        if not times:
+            return
+        if len(times) == 1:
+            t = times[-1]
+            ax.set_xlim(t - 1e-6, t + 1e-6)
+        else:
+            ax.set_xlim(times[0], times[-1])
 
     def _refresh_histogram(self):
         if not self._latest_flatten or self._pending_histogram:
