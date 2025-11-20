@@ -16,13 +16,28 @@ from . import (
     auto_calibrate_delays,
     run_dashboard,
     specs_from_delays,
+    DEFAULT_SPECS,
 )
 from .live.controller import LiveAcquisition
 from .metrics import REGISTRY
 from .plotting import static as static_plots
+from .plotting import timeseries as ts_plots
 from .io import coincfinder_backend as cf_backend
 
 app = typer.Typer(add_completion=False)
+
+
+def _group_metrics(values):
+    visibility = [m for m in values if m.name.lower().startswith("visibility")]
+    qber = [m for m in values if m.name.lower().startswith("qber")]
+    other = [m for m in values if m not in (*visibility, *qber)]
+    groups = [
+        ("Visibility", visibility),
+        ("QBER", qber),
+    ]
+    if other:
+        groups.append(("Other", other))
+    return [(name, vals) for name, vals in groups if vals]
 
 
 def _create_backend(mock: bool, exposure: float):
@@ -167,19 +182,26 @@ def replay(
     delay_start_ps: float = typer.Option(-8_000, help="Delay scan range start (ps)."),
     delay_end_ps: float = typer.Option(8_000, help="Delay scan range end (ps)."),
     delay_step_ps: float = typer.Option(50.0, help="Delay scan step (ps)."),
+    timeseries: bool = typer.Option(False, help="Plot singles + coincidences time-series."),
+    timeseries_chunk: float | None = typer.Option(None, help="Chunk size (s) for time-series plot (default 1 s, or exposure time if <=0)."),
+    bucket_seconds: float | None = typer.Option(None, help="Bucket duration (s) to use when ingesting the BIN (default 1 s, or exposure)."),
+    use_default_specs: bool = typer.Option(False, help="Skip auto calibration and use DEFAULT_SPECS."),
 ):
     """Process an existing BIN file (≈5 s capture) and report metrics."""
 
-    batch = cf_backend.read_file(path)
+    batch = cf_backend.read_file(path, bucket_seconds=bucket_seconds)
     typer.echo(f"Loaded {path} (duration {batch.duration_sec:.2f} s)")
-    delays = _calibrate_from_batch(
-        batch,
-        window_ps=window_ps,
-        delay_start_ps=delay_start_ps,
-        delay_end_ps=delay_end_ps,
-        delay_step_ps=delay_step_ps,
-    )
-    specs = specs_from_delays(window_ps=window_ps, delays_ps=delays)
+    if use_default_specs:
+        specs = DEFAULT_SPECS
+    else:
+        delays = _calibrate_from_batch(
+            batch,
+            window_ps=window_ps,
+            delay_start_ps=delay_start_ps,
+            delay_end_ps=delay_end_ps,
+            delay_step_ps=delay_step_ps,
+        )
+        specs = specs_from_delays(window_ps=window_ps, delays_ps=delays)
     pipeline = CoincidencePipeline(specs)
     coincidences = pipeline.run(batch)
     metrics = REGISTRY.compute_all(coincidences)
@@ -193,9 +215,53 @@ def replay(
     if plot:
         import matplotlib.pyplot as plt
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
-        static_plots.plot_coincidences(coincidences, ax=ax1)
-        static_plots.plot_metrics(metrics, ax=ax2)
+        metric_groups = _group_metrics(metrics)
+
+        fig = plt.figure(figsize=(12, 7))
+        gs = fig.add_gridspec(2, 2, width_ratios=[2, 1])
+        ax_coinc = fig.add_subplot(gs[:, 0])
+        static_plots.plot_coincidences(coincidences, ax=ax_coinc)
+        ax_coinc.set_title("Coincidences summary")
+        metric_axes = [fig.add_subplot(gs[0, 1]), fig.add_subplot(gs[1, 1])]
+        for ax in metric_axes:
+            ax.axis("off")
+        for ax, (group_name, group_values) in zip(metric_axes, metric_groups):
+            static_plots.plot_metric_group(
+                group_values,
+                ax=ax,
+                title=f"{group_name} metrics",
+                ylabel=group_name,
+            )
+            ax.axis("on")
+        plt.tight_layout()
+
+        if timeseries:
+            chunk = timeseries_chunk
+            if chunk is None or chunk <= 0:
+                chunk = float(batch.metadata.get("exposure_sec", 1.0))
+            ts = ts_plots.compute_timeseries(batch, chunk, specs)
+            fig_ts = plt.figure(figsize=(12, 9))
+            gs_ts = fig_ts.add_gridspec(3, 2, height_ratios=[1, 1, 1])
+            ax_singles = fig_ts.add_subplot(gs_ts[0, :])
+            ax_coinc_ts = fig_ts.add_subplot(gs_ts[1, :])
+            metric_axes_ts = [fig_ts.add_subplot(gs_ts[2, 0]), fig_ts.add_subplot(gs_ts[2, 1])]
+            for ax in metric_axes_ts:
+                ax.axis("off")
+            metric_group_names = [
+                (name, [val.name for val in group]) for name, group in metric_groups[:2]
+            ]
+            ts_plots.plot_timeseries(
+                ts,
+                singles_ax=ax_singles,
+                coincid_ax=ax_coinc_ts,
+                metric_axes=metric_axes_ts,
+                metric_groups=metric_group_names,
+            )
+            ax_coinc_ts.set_xlabel("Time (s)")
+            for ax in metric_axes_ts[: len(metric_group_names)]:
+                ax.axis("on")
+                ax.set_xlabel("Time (s)")
+
         plt.show()
 
 

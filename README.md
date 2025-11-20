@@ -70,6 +70,15 @@ qlaib live --exposure 2.0
 # Process an existing BIN file (≈5 s capture) without hardware
 qlaib replay Data/sample_capture.bin --window-ps 200 --plot
 
+# Plot singles/coincidences + metric time series from a BIN file (default 1 s chunks)
+qlaib replay Data/sample_capture.bin --plot --timeseries
+
+# Skip auto-delay calibration and use DEFAULT_SPECS (lab defaults)
+qlaib replay Data/sample_capture.bin --use-default-specs --plot
+
+# Ingest BIN file using the actual exposure time per bucket (e.g., 0.4 s)
+qlaib replay Data/sample_capture.bin --bucket-seconds 0.4 --plot --timeseries
+
 # Develop without hardware using the synthetic backend
 qlaib live --mock --exposure 0.5
 ```
@@ -78,9 +87,17 @@ To script the same workflows, see:
 
 	- `examples/process_bin_file.py` – load a recorded BIN file, auto-calibrate
 	  delays, and print coincidences/metrics.
-	- `examples/live_qutag.py` – initialize the QuTAG backend, calibrate once, and
-	  launch the Tk dashboard with all live controls.
-	- `examples/mock_quickstart.py` – Simulated plotter.
+- `examples/live_qutag.py` – initialize the QuTAG backend, calibrate once, and
+  launch the Tk dashboard with all live controls.
+- `examples/mock_quickstart.py` – Simulated plotter.
+- `examples/bin_custom_specs.py` – calibrate using the first N seconds of a BIN
+  file, apply custom coincidence specs (including N-fold), and plot coincidences +
+  metrics such as visibility/QBER.
+- `examples/bin_default_timeseries.py` – use `DEFAULT_SPECS`, auto-calibrate on
+  the first N seconds of a BIN file, and visualize both aggregate metrics and
+  per-chunk time series.
+- `examples/bin_timeseries_only.py` – plot singles and coincidences as time series
+  without extra metrics (useful for quick sanity checks).
 
 ## Custom coincidence layouts
 
@@ -88,14 +105,18 @@ Coincidence logic is fully described by `CoincidenceSpec`, so you can define any
 channel combinations (2-fold or higher) and plug them into the pipeline:
 
 ```python
-from qlaiblib import CoincidencePipeline, CoincidenceSpec
+from qlaiblib import CoincidencePipeline, CoincidenceSpec, DEFAULT_SPECS
 
-specs = (
+specs = DEFAULT_SPECS  # ready-to-use H/V/D/A pairs + GHZ-style triplets
+pipeline = CoincidencePipeline(specs)
+
+# or build your own specs ad-hoc
+custom_specs = (
     CoincidenceSpec(label="AB", channels=(1, 3), window_ps=250.0, delay_ps=12.5),
     CoincidenceSpec(label="CD", channels=(2, 4), window_ps=250.0, delay_ps=-8.0),
     CoincidenceSpec(label="ABC", channels=(1, 3, 5), window_ps=300.0),
 )
-pipeline = CoincidencePipeline(specs)
+custom_pipeline = CoincidencePipeline(custom_specs)
 ```
 
 - `window_ps` **and** `delay_ps` are specified in **picoseconds**.
@@ -104,6 +125,25 @@ pipeline = CoincidencePipeline(specs)
   so the generated specs match your detector wiring.
 - The CLI and Tk dashboard reflect whatever specs you supply, so custom labels
   automatically appear in plots, filters, and metrics.
+
+- **New installs/lab defaults**: set `DEFAULT_SPECS` in code and wire it directly
+  into `CoincidencePipeline` so everyone sees the same definitions.
+
+### Using specs across the APIs
+
+- **CLI**: tweak `qlaiblib/cli.py` where `CoincidencePipeline(specs)` is created
+  (e.g., replace `specs = specs_from_delays(...)` with `specs = DEFAULT_SPECS`)
+  to hard-code lab defaults when you don’t need auto-delay scans.
+- **Live dashboard**:
+  ```python
+  from qlaiblib import LiveAcquisition, MockBackend, CoincidencePipeline, DEFAULT_SPECS, run_dashboard
+  backend = MockBackend(exposure_sec=1.0)
+  pipeline = CoincidencePipeline(DEFAULT_SPECS)
+  controller = LiveAcquisition(backend, pipeline)
+  run_dashboard(controller)
+  ```
+- **Offline scripts** (BIN replay, notebooks): pass `DEFAULT_SPECS` into the
+  pipeline exactly as shown above, or mix in your own N-fold coincidences.
 
 ## Python API glimpse
 

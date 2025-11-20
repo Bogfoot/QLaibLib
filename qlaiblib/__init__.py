@@ -9,6 +9,7 @@ from .coincidence.delays import (
     auto_calibrate_delays,
     specs_from_delays,
 )
+from .coincidence.specs import DEFAULT_SPECS, DEFAULT_PAIRS, GHZ_TRIPLETS
 from .data.models import AcquisitionBatch, CoincidenceSpec
 from .live.controller import LiveAcquisition
 from .live.tk_dashboard import run_dashboard
@@ -22,6 +23,9 @@ __all__ = [
     "AcquisitionBatch",
     "DEFAULT_REF_PAIRS",
     "DEFAULT_CROSS_PAIRS",
+    "DEFAULT_PAIRS",
+    "GHZ_TRIPLETS",
+    "DEFAULT_SPECS",
     "auto_calibrate_delays",
     "specs_from_delays",
     "LiveAcquisition",

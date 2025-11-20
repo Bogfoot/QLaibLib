@@ -33,12 +33,12 @@ PYBIND11_MODULE(coincfinder, m) {
   // duration).
   m.def(
       "read_file_auto",
-      [](const std::string &filename) {
+      [](const std::string &filename, double exposure_seconds) {
         double duration_sec = 0.0;
-        auto singles = readFileAuto(filename, duration_sec);
+        auto singles = readFileAuto(filename, duration_sec, exposure_seconds);
         return std::make_pair(std::move(singles), duration_sec);
       },
-      py::arg("filename"),
+      py::arg("filename"), py::arg("exposure_seconds") = -1.0,
       "Automatically read CSV or BIN file into a map<int, Singles>; returns "
       "(singles_map, measurement_duration_sec).");
 
@@ -66,6 +66,13 @@ PYBIND11_MODULE(coincfinder, m) {
 
   m.def("has_ending", &hasEnding, py::arg("string"), py::arg("ending"),
         "Check if a string ends with a given suffix");
+
+  m.def("set_bucket_duration_seconds", &setBucketDurationSeconds,
+        py::arg("seconds") = 1.0,
+        "Set the time bucket duration (seconds) used when ingesting singles (default 1 s)."
+        );
+  m.def("get_bucket_duration_seconds", &bucketDurationSeconds,
+        "Return the current bucket duration in seconds.");
 
   // --- Bind Coincidences.h functions ---
   // --- Count coincidences with delay (use ps everywhere in Python)

@@ -82,10 +82,11 @@ class QuTAG:
             lib_name = "tdcbase.dll"
             path_sep = ";"
         else:
+            lib_dir = ""
             lib_name = "libtdcbase.so"
             path_sep = ":"
         
-        dll_path = lib_dir / lib_name
+        dll_path = os.path.join(lib_dir, lib_name)
         current_path = os.environ.get("PATH", "")
         entry = str(lib_dir)
         entries = current_path.split(path_sep) if current_path else []

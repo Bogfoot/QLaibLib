@@ -50,7 +50,7 @@ class QuTAGBackend(AcquisitionBackend):
                 except Exception:
                     pass
         try:
-            batch = cf_backend.read_file(path)
+            batch = cf_backend.read_file(path, bucket_seconds=duration)
         finally:
             try:
                 os.unlink(path)

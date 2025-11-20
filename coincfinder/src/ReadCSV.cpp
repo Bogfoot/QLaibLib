@@ -5,8 +5,10 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cctype>
 #include <charconv>
+#include <cmath>
 #include <string_view>
 #include <utility>
 
@@ -14,6 +16,15 @@ namespace {
 
 constexpr long long kPicosecondsPerSecond = 1'000'000'000'000LL;
 constexpr int kMaxChannels = 8;
+
+std::atomic<double> gBucketSeconds{1.0};
+
+inline long long bucketIndex(Timestamp ts, Timestamp firstTimestamp,
+                             long long bucketWidthPs) {
+  if (bucketWidthPs <= 0)
+    bucketWidthPs = kPicosecondsPerSecond;
+  return static_cast<long long>((ts - firstTimestamp) / bucketWidthPs);
+}
 
 inline void appendTimestamp(Singles &singles, long long second, Timestamp ts) {
   // Buckets must stay sorted because the coincidence scan assumes monotonic
@@ -63,8 +74,20 @@ bool hasEnding(const std::string &str, const std::string &ending) {
          str.compare(str.size() - ending.size(), ending.size(), ending) == 0;
 }
 
+void setBucketDurationSeconds(double seconds) {
+  const double clamped = seconds > 1e-9 ? seconds : 1.0;
+  gBucketSeconds.store(clamped, std::memory_order_relaxed);
+}
+
+double bucketDurationSeconds() {
+  return gBucketSeconds.load(std::memory_order_relaxed);
+}
+
 std::map<int, Singles> readFileAuto(const std::string &filename,
-                                    double &duration_sec) {
+                                    double &duration_sec,
+                                    double exposure_seconds) {
+  if (exposure_seconds > 1e-9)
+    setBucketDurationSeconds(exposure_seconds);
   if (hasEnding(filename, ".bin"))
     return readBINtoSingles(filename, duration_sec);
   return readCSVtoSingles(filename, duration_sec);
@@ -85,6 +108,8 @@ std::map<int, Singles> readCSVtoSingles(const std::string &filename,
   bool first = true;
   long long minTime = LLONG_MAX;
   long long maxTime = 0;
+  const long long bucketWidthPs = static_cast<long long>(
+      std::llround(bucketDurationSeconds() * kPicosecondsPerSecond));
 
   while (std::getline(file, line)) {
     if (line.empty())
@@ -115,10 +140,9 @@ std::map<int, Singles> readCSVtoSingles(const std::string &filename,
       firstTimestamp = ts;
       first = false;
     }
-    const long long sec =
-        static_cast<long long>((ts - firstTimestamp) / kPicosecondsPerSecond);
+    const long long sec = bucketIndex(ts, firstTimestamp, bucketWidthPs);
 
-    appendTimestamp(channels[ch], sec, ts);
+    appendTimestamp(channels[ch], sec, ts - firstTimestamp);
 
     if (ts < minTime)
       minTime = ts;
@@ -148,6 +172,8 @@ std::map<int, Singles> readBINtoSingles(const std::string &filename,
   bool first = true;
   long long minTime = LLONG_MAX;
   long long maxTime = 0;
+  const long long bucketWidthPs = static_cast<long long>(
+      std::llround(bucketDurationSeconds() * kPicosecondsPerSecond));
 
   while (file.read(reinterpret_cast<char *>(&t_raw), sizeof(t_raw))) {
     if (!file.read(reinterpret_cast<char *>(&c_raw), sizeof(c_raw)))
@@ -163,9 +189,8 @@ std::map<int, Singles> readBINtoSingles(const std::string &filename,
       first = false;
     }
 
-    const long long sec =
-        static_cast<long long>((ts - firstTimestamp) / kPicosecondsPerSecond);
-    appendTimestamp(channels[ch], sec, ts);
+    const long long sec = bucketIndex(ts, firstTimestamp, bucketWidthPs);
+    appendTimestamp(channels[ch], sec, ts - firstTimestamp);
 
     if (ts < minTime)
       minTime = ts;

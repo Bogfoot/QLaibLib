@@ -43,17 +43,27 @@ def _flatten_single(raw_obj) -> np.ndarray:
     return np.concatenate(arrays)
 
 
-def read_file(path: str | Path) -> AcquisitionBatch:
+def read_file(path: str | Path, *, bucket_seconds: float | None = None) -> AcquisitionBatch:
     module = _module()
-    singles_map, duration_sec = module.read_file_auto(str(path))
+    target_bucket = bucket_seconds if bucket_seconds and bucket_seconds > 0 else 1.0
+    read_fn = getattr(module, "read_file_auto", None)
+    if read_fn is None:
+        raise RuntimeError("coincfinder module is missing read_file_auto")
+    code = getattr(read_fn, "__code__", None)
+    if code is not None and code.co_argcount >= 2:
+        singles_map, duration_sec = read_fn(str(path), target_bucket)
+    else:
+        singles_map, duration_sec = read_fn(str(path))
+
     singles: Dict[int, np.ndarray] = {
-        int(ch): _flatten_single(raw) for ch, raw in singles_map.items()
+        int(ch): _flatten_single(raw).astype(np.int64, copy=False)
+        for ch, raw in singles_map.items()
     }
     return AcquisitionBatch(
         singles=singles,
         duration_sec=duration_sec,
         started_at=timing.utc_now(),
-        metadata={"source": str(path)},
+        metadata={"source": str(path), "bucket_seconds": target_bucket},
     )
 
 
