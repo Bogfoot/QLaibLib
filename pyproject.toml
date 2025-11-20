@@ -14,7 +14,7 @@ version = "0.1.0"
 description = "Toolkit for singles counting, coincidences, metrics, and live plotting for QuTAG/coincfinder setups."
 readme = "README.md"
 authors = [
-  {name = "Adrian Bogdan", email = "adrian@example.com"},
+  {name = "Adrian Udovičić", email = "adrian.udovicic@fmf.uni-lj.si"},
   {name = "Codex Assistant"}
 ]
 requires-python = ">=3.10"
