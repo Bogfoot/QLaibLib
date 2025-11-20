@@ -14,6 +14,14 @@ DEFAULT_PAIRS = (
     CoincidenceSpec(label="VH", channels=(2, 5), window_ps=200.0, delay_ps=0.0),
     CoincidenceSpec(label="DA", channels=(3, 8), window_ps=200.0, delay_ps=0.0),
     CoincidenceSpec(label="AD", channels=(4, 7), window_ps=200.0, delay_ps=0.0),
+    CoincidenceSpec(label="HD", channels=(1, 7), window_ps=200.0, delay_ps=0.0),
+    CoincidenceSpec(label="HA", channels=(1, 8), window_ps=200.0, delay_ps=0.0),
+    CoincidenceSpec(label="VD", channels=(2, 7), window_ps=200.0, delay_ps=0.0),
+    CoincidenceSpec(label="VA", channels=(2, 8), window_ps=200.0, delay_ps=0.0),
+    CoincidenceSpec(label="DH", channels=(3, 5), window_ps=200.0, delay_ps=0.0),
+    CoincidenceSpec(label="DV", channels=(3, 6), window_ps=200.0, delay_ps=0.0),
+    CoincidenceSpec(label="AH", channels=(4, 5), window_ps=200.0, delay_ps=0.0),
+    CoincidenceSpec(label="AV", channels=(4, 6), window_ps=200.0, delay_ps=0.0),
 )
 
 # Example N-fold (GHZ-style) coincidences built from three channels

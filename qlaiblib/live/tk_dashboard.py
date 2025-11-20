@@ -28,6 +28,7 @@ PLOT_MODES = {
     "3": "singles+coincidences",
     "4": "metrics",
     "5": "all",
+    "6": "chsh",
 }
 
 
@@ -102,15 +103,16 @@ class DashboardApp(tk.Tk):
             width=6,
             command=self._update_exposure,
         ).pack(side=tk.LEFT)
-        ttk.Label(controls, text="Timeseries view (keys 1-5)").pack(side=tk.RIGHT, padx=8)
+        ttk.Label(controls, text="Timeseries view (keys 1-6)").pack(side=tk.RIGHT, padx=8)
 
         self.figure = plt.Figure(figsize=(10, 7), dpi=100)
         self.ax_singles = None
         self.ax_coinc = None
         self.ax_metrics = None
         self.ax_metrics_secondary = None
+        self.ax_chsh = None
         self._current_layout: tuple[str, ...] = ()
-        self._lines = {"singles": {}, "coincidences": {}, "visibility": None, "qber": None}
+        self._lines = {"singles": {}, "coincidences": {}, "visibility": None, "qber": None, "chsh": None}
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.plot_tab)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         self.figure.tight_layout()
@@ -261,6 +263,7 @@ class DashboardApp(tk.Tk):
             "3": ("singles", "coincidences"),
             "4": ("metrics",),
             "5": ("singles", "coincidences", "metrics"),
+            "6": ("chsh",),
         }
         layout = layout_map[self._view_mode]
         self._ensure_axes(layout)
@@ -354,6 +357,27 @@ class DashboardApp(tk.Tk):
             lines2, labels2 = qber_ax.get_legend_handles_labels()
             vis_ax.legend(lines + lines2, labels + labels2, fontsize=8, loc="upper right")
 
+        if self.ax_chsh is not None and "chsh" in layout:
+            ax = self.ax_chsh
+            data = list(self.history.metrics.get("CHSH_S", []))
+            if self._lines["chsh"] is None:
+                (self._lines["chsh"],) = ax.plot([], [], label="CHSH S", color="#ffbe0b")
+            if data:
+                ts, ys = self._downsample_series(times, data)
+                self._lines["chsh"].set_data(ts, ys)
+                ax.set_xlim(ts[0], ts[-1])
+                ymin, ymax = min(ys), max(ys)
+                if ymin == ymax:
+                    ymin -= 0.05
+                    ymax += 0.05
+                ax.set_ylim(ymin - 0.05, ymax + 0.05)
+            else:
+                self._lines["chsh"].set_data([], [])
+                ax.set_ylim(-0.1, 0.1)
+            ax.set_ylabel("CHSH S")
+            ax.grid(True, alpha=0.2)
+            ax.legend(loc="upper right")
+
         self.canvas.draw_idle()
 
     def _ensure_axes(self, layout: tuple[str, ...]):
@@ -365,6 +389,7 @@ class DashboardApp(tk.Tk):
         self.ax_coinc = None
         self.ax_metrics = None
         self.ax_metrics_secondary = None
+        self.ax_chsh = None
         count = len(layout)
         sharex = None
         for idx, name in enumerate(layout):
@@ -380,21 +405,28 @@ class DashboardApp(tk.Tk):
                 self.ax_metrics_secondary = ax.twinx()
                 self._lines["visibility"] = None
                 self._lines["qber"] = None
+            elif name == "chsh":
+                self.ax_chsh = ax
+                self._lines["chsh"] = None
         self._lines["singles"] = {}
         self._lines["coincidences"] = {}
+        self._lines["visibility"] = None
+        self._lines["qber"] = None
+        self._lines["chsh"] = None
         self.figure.tight_layout()
 
     def _downsample_series(self, times: list[float], data: list[float], limit: int | None = None):
         if not data:
             return [], []
         limit = limit or min(self.history.max_points, 600)
-        series_times = times[-len(data):]
-        if len(data) <= limit:
-            return series_times, data
-        idx = np.linspace(0, len(data) - 1, limit, dtype=int)
-        sampled_times = [series_times[i] for i in idx]
-        sampled_values = [data[i] for i in idx]
-        return sampled_times, sampled_values
+        series_times = np.asarray(times[-len(data):], dtype=float)
+        series_values = np.asarray(data, dtype=float)
+        if series_values.size <= limit:
+            return series_times.tolist(), series_values.tolist()
+        idx = np.linspace(0, series_values.size - 1, limit, dtype=int)
+        sampled_times = series_times[idx]
+        sampled_values = series_values[idx]
+        return sampled_times.tolist(), sampled_values.tolist()
 
     def _refresh_histogram(self):
         if not self._latest_flatten or self._pending_histogram:
@@ -457,13 +489,11 @@ class DashboardApp(tk.Tk):
         if label in {"HH", "VV", "HV", "VH"}:
             like = counts.get("HH", 0) + counts.get("VV", 0)
             cross = counts.get("HV", 0) + counts.get("VH", 0)
-            denom = like + cross
-            return (like - cross) / denom if denom else 0.0
+            return like / cross if cross else float(like)
         if label in {"DD", "AA", "DA", "AD"}:
             like = counts.get("DD", 0) + counts.get("AA", 0)
             cross = counts.get("DA", 0) + counts.get("AD", 0)
-            denom = like + cross
-            return (like - cross) / denom if denom else 0.0
+            return like / cross if cross else float(like)
         return 0.0
 
     def _heralding_for_label(self, label: str) -> float:

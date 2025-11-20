@@ -12,8 +12,8 @@ a browser. Ready and lab friendly. :)
   the mock backend for offline development.
 - **Coincidence pipeline**: calibrate per-pair delays, compute 2-fold or N-fold
   coincidence rates, and estimate accidentals.
-- **Metrics**: built-in visibility (HV, DA, total) and QBER metrics plugged into
-  a registry so new observables can be added declaratively.
+- **Metrics**: built-in visibility (HV, DA, total), QBER, and CHSH S metrics
+  plugged into a registry so new observables can be added declaratively.
 - **Plotting**: Matplotlib helpers for singles, coincidences, and metric
   summaries; reusable both in scripts and in the dashboard.
 - **Live dashboard**: Tkinter GUI with tabs for live time-series plots, delay
@@ -80,6 +80,7 @@ qlaib replay Data/sample_capture.bin --use-default-specs --plot
 qlaib replay Data/sample_capture.bin --bucket-seconds 0.4 --plot --timeseries
 
 # Run the live dashboard in demo mode, replaying a BIN capture instead of hardware
+# (press keys 1–6 to switch between singles/coincidences/metrics/CHSH views)
 qlaib live --demo-file Data/sample_capture.bin --bucket-seconds 0.4 --history-points 800
 
 # Develop without hardware using the synthetic backend
