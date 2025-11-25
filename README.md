@@ -177,3 +177,6 @@ run_dashboard(controller)
 The original helper scripts remain untouched for reference (`Print_Counts_and_Stats.py`,
 `Stability_Check_and_Record.py`, etc.), but new development should happen
 through the packaged interfaces above. They can be distributed upon reasonable request.
+
+## License
+MIT — see `LICENSE` for details. Copyright (c) 2025 Adrian Udovičić, PhD student in physics at University of Ljubljana, Faculty of Mathematics and Physics.
