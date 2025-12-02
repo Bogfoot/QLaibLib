@@ -74,15 +74,17 @@ class QuTAG:
         """
         file_path = Path(__file__).resolve().parent
         if sys.maxsize > 2**32:
-          lib_dir = file_path / "DLL_64bit"
+            lib_dir = file_path / "DLL_64bit"
         else:
-          lib_dir = file_path / "DLL_32bit"
+            lib_dir = file_path / "DLL_32bit"
 
         if os.name == "nt":
             lib_name = "tdcbase.dll"
             path_sep = ";"
         else:
-            lib_dir = ""
+            # On POSIX use the module directory so the .so can live next to this file.
+            # This avoids relying on LD_LIBRARY_PATH or the current working directory.
+            lib_dir = file_path
             lib_name = "libtdcbase.so"
             path_sep = ":"
         
