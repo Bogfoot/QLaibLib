@@ -17,7 +17,7 @@ from ..utils import timing
 class QuTAGBackend(AcquisitionBackend):
     def __init__(self, exposure_sec: float = 1.0):
         try:
-            import QuTAG_MC as qtag  # type: ignore
+            from qlaiblib.vendor import QuTAG_MC as qtag  # type: ignore
         except ImportError as exc:  # pragma: no cover - hw dependency
             raise RuntimeError("QuTAG_MC is not installed.") from exc
         self._driver = qtag.QuTAG()
