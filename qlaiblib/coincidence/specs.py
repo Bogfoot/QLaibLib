@@ -34,7 +34,8 @@ GHZ_TRIPLETS = (
 DEFAULT_SPECS = DEFAULT_PAIRS + GHZ_TRIPLETS
 
 # Singles channels to plot in time-series views (keys 1/3/5).
-SINGLES_PLOT_CHANNELS = tuple(range(1, 9))
+# SINGLES_PLOT_CHANNELS = tuple(range(1, 9))
+SINGLES_PLOT_CHANNELS = tuple(range(5, 9))
 
 # If True, dashboard singles plots show rates (counts per second) instead of raw counts.
 SINGLES_AS_RATE = True
