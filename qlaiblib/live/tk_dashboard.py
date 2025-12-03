@@ -87,11 +87,11 @@ class DashboardApp(tk.Tk):
         self.max_points_var = tk.IntVar(value=history_points)
         self.hist_auto_var = tk.BooleanVar(value=True)
         self.hist_pair_var = tk.StringVar(value=self.specs[0].label)
-        self.hist_window_ps = tk.DoubleVar(value=200.0)
-        self.hist_start_ps = tk.DoubleVar(value=-8000.0)
-        self.hist_end_ps = tk.DoubleVar(value=8000.0)
-        self.hist_step_ps = tk.DoubleVar(value=50.0)
-        self.coinc_window_ps = tk.DoubleVar(value=200.0)
+        self.hist_window_ps = tk.DoubleVar(value=250.0)
+        self.hist_start_ps = tk.DoubleVar(value=-30000.0)
+        self.hist_end_ps = tk.DoubleVar(value=30000.0)
+        self.hist_step_ps = tk.DoubleVar(value=10.0)
+        self.coinc_window_ps = self.hist_auto_var
         self.timeseries_chunk = tk.DoubleVar(value=controller.exposure_sec)
         self._latest_batch = None
         self._latest_flatten = {}
@@ -347,14 +347,18 @@ class DashboardApp(tk.Tk):
                     (line,) = ax.plot([], [], label=f"Ch {ch}", color=color)
                     self._lines["singles"][ch] = line
                 if data:
+                    last_val = data[-1]
                     ts, ys = self._downsample_series(times, data)
                     line.set_data(ts, ys)
+                    unit = "counts/s" if self.singles_as_rate else "counts"
+                    line.set_label(f"Ch {ch} ({last_val:.0f} {unit})")
                 else:
                     line.set_data([], [])
+                    line.set_label(f"Ch {ch}")
             self._set_xlimits(ax, times)
             ax.relim()
             ax.autoscale_view(True, True, True)
-            ax.set_ylabel("Singles")
+            ax.set_ylabel("Singles (counts/s)" if self.singles_as_rate else "Singles (counts)")
             ax.legend(ncol=4, fontsize=7, **LEGEND_KW)
             ax.grid(True, color=COLOR_GRID, alpha=0.3)
             ax.margins(x=0.02)
@@ -740,7 +744,7 @@ def simple_prompt(parent, title: str, default: str) -> str | None:
     return value["result"]
 
 
-def run_dashboard(controller: LiveAcquisition, history_points: int = 500):
+def run_dashboard(controller: LiveAcquisition, history_points: int = 200):
     app = DashboardApp(controller, history_points=history_points)
     app.protocol("WM_DELETE_WINDOW", app.on_close)
     app.mainloop()

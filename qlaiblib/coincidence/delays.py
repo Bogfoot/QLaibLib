@@ -8,25 +8,25 @@ from ..data.models import AcquisitionBatch, CoincidenceSpec
 from ..io import coincfinder_backend as cf_backend
 
 DEFAULT_REF_PAIRS: Tuple[Tuple[str, int, int], ...] = (
-    ("HH", 1, 5),
-    ("VV", 2, 6),
-    ("DD", 3, 7),
-    ("AA", 4, 8),
+    ("HH", 5, 8),
+    ("VV", 6, 7),
+    # ("DD", 3, 7),
+    # ("AA", 4, 8),
 )
 
 DEFAULT_CROSS_PAIRS: Tuple[Tuple[str, int, int], ...] = (
-    ("HV", 1, 6),
-    ("VH", 2, 5),
-    ("DA", 3, 8),
-    ("AD", 4, 7),
-    ("HD", 1, 7),
-    ("HA", 1, 8),
-    ("VD", 2, 7),
-    ("VA", 2, 8),
-    ("DH", 3, 5),
-    ("DV", 3, 6),
-    ("AH", 4, 5),
-    ("AV", 4, 6),
+    ("HV", 5, 7),
+    ("VH", 6, 8),
+    # ("DA", 3, 8),
+    # ("AD", 4, 7),
+    # ("HD", 1, 7),
+    # ("HA", 1, 8),
+    # ("VD", 2, 7),
+    # ("VA", 2, 8),
+    # ("DH", 3, 5),
+    # ("DV", 3, 6),
+    # ("AH", 4, 5),
+    # ("AV", 4, 6),
 )
 
 
