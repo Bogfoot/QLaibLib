@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from ..coincidence.specs import DEFAULT_SPECS
+from ..coincidence import specs as coincidence_specs
 from ..data.models import CoincidenceResult, MetricValue
 from ..plotting import static as static_plots
 from ..plotting import timeseries as ts_plots
@@ -30,14 +30,6 @@ PLOT_MODES = {
     "5": "all",
     "6": "chsh_full",
 }
-
-BASE_COINCIDENCE_LABELS = ["HH", "VV", "HV", "VH", "DD", "AA", "DA", "AD"]
-CHSH_LABELS = [
-    "HH", "HV", "VH", "VV",
-    "HD", "HA", "VD", "VA",
-    "DH", "DV", "AH", "AV",
-    "DD", "DA", "AD", "AA",
-]
 
 COLOR_PALETTE = [
     "#FF595E",
@@ -58,6 +50,14 @@ COLOR_BG = "#474747"
 COLOR_GRID = "#ff646f6d"
 LEGEND_KW = {"facecolor": COLOR_BG, "edgecolor": "white", "labelcolor": "white"}
 
+# Fallback if the specs module does not define custom tabs.
+DEFAULT_TAB_CONFIG = (
+    ("plots", "Plots"),
+    ("histograms", "Histograms"),
+    ("settings", "Settings"),
+    ("export", "Data / Export"),
+)
+
 class DashboardApp(tk.Tk):
     def __init__(self, controller: LiveAcquisition, history_points: int = 500):
         super().__init__()
@@ -68,7 +68,19 @@ class DashboardApp(tk.Tk):
         self.history = HistoryBuffer(max_points=history_points)
         self._view_mode = "5"
         self.settings = settings_store.load()
-        self.specs = controller.pipeline.specs if controller.pipeline.specs else DEFAULT_SPECS
+        self.specs = controller.pipeline.specs if controller.pipeline.specs else coincidence_specs.DEFAULT_SPECS
+        self.tab_config = getattr(coincidence_specs, "DASHBOARD_TABS", DEFAULT_TAB_CONFIG)
+        # Which coincidence labels to render in plots (keys 2/3/5)
+        self.coinc_labels = tuple(getattr(coincidence_specs, "COINCIDENCE_PLOT_LABELS", (spec.label for spec in self.specs)))
+        if not self.coinc_labels:
+            self.coinc_labels = tuple(spec.label for spec in self.specs)
+        # CHSH labels (key 6)
+        self.chsh_labels = tuple(getattr(coincidence_specs, "CHSH_LABELS", (
+            "HH", "HV", "VH", "VV",
+            "HD", "HA", "VD", "VA",
+            "DH", "DV", "AH", "AV",
+            "DD", "DA", "AD", "AA",
+        )))
         self.max_points_var = tk.IntVar(value=history_points)
         self.hist_auto_var = tk.BooleanVar(value=True)
         self.hist_pair_var = tk.StringVar(value=self.specs[0].label)
@@ -102,21 +114,32 @@ class DashboardApp(tk.Tk):
     def _build_ui(self):
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill=tk.BOTH, expand=True)
-        self.plot_tab = ttk.Frame(self.notebook)
-        self.hist_tab = ttk.Frame(self.notebook)
-        self.settings_tab = ttk.Frame(self.notebook)
-        self.export_tab = ttk.Frame(self.notebook)
-        self.notebook.add(self.plot_tab, text="Plots")
-        self.notebook.add(self.hist_tab, text="Histograms")
-        self.notebook.add(self.settings_tab, text="Settings")
-        self.notebook.add(self.export_tab, text="Data / Export")
-        self._build_plot_tab()
-        self._build_hist_tab()
-        self._build_settings_tab()
-        self._build_export_tab()
+        self._tabs = {}
+        builders = {
+            "plots": self._build_plot_tab,
+            "histograms": self._build_hist_tab,
+            "settings": self._build_settings_tab,
+            "export": self._build_export_tab,
+        }
+        for key, label in self.tab_config:
+            frame = ttk.Frame(self.notebook)
+            self._tabs[key] = frame
+            setattr(self, f"{key}_tab", frame)
+            if key == "plots":
+                self.plot_tab = frame
+            elif key == "histograms":
+                self.hist_tab = frame
+            elif key == "settings":
+                self.settings_tab = frame
+            elif key == "export":
+                self.export_tab = frame
+            self.notebook.add(frame, text=label)
+            build = builders.get(key)
+            if build:
+                build(frame)
 
-    def _build_plot_tab(self):
-        controls = ttk.Frame(self.plot_tab)
+    def _build_plot_tab(self, parent):
+        controls = ttk.Frame(parent)
         controls.pack(fill=tk.X, padx=8, pady=4)
         ttk.Button(controls, text="Start", command=self.start).pack(side=tk.LEFT, padx=4)
         ttk.Button(controls, text="Stop", command=self.stop).pack(side=tk.LEFT, padx=4)
@@ -151,12 +174,12 @@ class DashboardApp(tk.Tk):
         self._chsh_fill = None
         self._chsh_errorbar = None
         self._chsh_count_lines: dict[str, any] = {}
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self.plot_tab)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=parent)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         self.figure.tight_layout()
 
-    def _build_hist_tab(self):
-        top = ttk.Frame(self.hist_tab)
+    def _build_hist_tab(self, parent):
+        top = ttk.Frame(parent)
         top.pack(fill=tk.X, padx=8, pady=4)
         ttk.Label(top, text="Pair").pack(side=tk.LEFT)
         ttk.Combobox(top, values=[spec.label for spec in self.specs], textvariable=self.hist_pair_var, state="readonly", width=10).pack(side=tk.LEFT, padx=4)
@@ -173,12 +196,12 @@ class DashboardApp(tk.Tk):
 
         self.hist_fig = plt.Figure(figsize=(8, 4), dpi=100)
         self.hist_ax = self.hist_fig.add_subplot(111)
-        self.hist_canvas = FigureCanvasTkAgg(self.hist_fig, master=self.hist_tab)
+        self.hist_canvas = FigureCanvasTkAgg(self.hist_fig, master=parent)
         self.hist_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         self.hist_fig.tight_layout()
 
-    def _build_settings_tab(self):
-        frame = ttk.Frame(self.settings_tab)
+    def _build_settings_tab(self, parent):
+        frame = ttk.Frame(parent)
         frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         ttk.Label(frame, text="Per-channel delays (ps)").grid(row=0, column=0, sticky="w")
         for ch in range(1, 9):
@@ -187,8 +210,8 @@ class DashboardApp(tk.Tk):
         ttk.Label(frame, text="Coincidence window (ps)").grid(row=10, column=0, sticky="w")
         ttk.Entry(frame, textvariable=self.coinc_window_ps, width=8).grid(row=10, column=1, sticky="w")
 
-    def _build_export_tab(self):
-        frame = ttk.Frame(self.export_tab)
+    def _build_export_tab(self, parent):
+        frame = ttk.Frame(parent)
         frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         ttk.Label(frame, text="History length (points)").grid(row=0, column=0, sticky="w")
         ttk.Spinbox(frame, from_=50, to=2000, increment=50, textvariable=self.max_points_var, width=8, command=self._update_history_length).grid(row=0, column=1, sticky="w")
@@ -332,7 +355,7 @@ class DashboardApp(tk.Tk):
         if self.ax_coinc is not None and "coincidences" in layout:
             ax = self.ax_coinc
             for label, values in self.history.coincidences.items():
-                if label not in BASE_COINCIDENCE_LABELS:
+                if label not in self.coinc_labels:
                     continue
                 data = list(values)
                 line = self._lines["coincidences"].get(label)
@@ -415,7 +438,7 @@ class DashboardApp(tk.Tk):
 
         if self.ax_chsh_counts is not None and "chsh_counts" in layout:
             ax = self.ax_chsh_counts
-            for label in CHSH_LABELS:
+            for label in self.chsh_labels:
                 series = self.history.coincidences.get(label)
                 line = self._chsh_count_lines.get(label)
                 if line is None:

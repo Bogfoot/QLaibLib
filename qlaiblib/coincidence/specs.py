@@ -1,4 +1,4 @@
-"""Default coincidence spec helpers."""
+"""Default coincidence spec helpers and dashboard layout presets."""
 
 from __future__ import annotations
 
@@ -33,4 +33,32 @@ GHZ_TRIPLETS = (
 # Convenience tuple that can be imported directly in scripts / live dashboards
 DEFAULT_SPECS = DEFAULT_PAIRS + GHZ_TRIPLETS
 
-__all__ = ["DEFAULT_PAIRS", "GHZ_TRIPLETS", "DEFAULT_SPECS"]
+# Which coincidence labels should appear in the live "coincidences" plots (keys 2,3,5).
+# By default we show all specs, but you can shorten or reorder this tuple.
+COINCIDENCE_PLOT_LABELS = tuple(spec.label for spec in DEFAULT_SPECS if len(spec.channels) >= 2)
+
+# Order of CHSH coincidence pairs for the CHSH view (key 6).
+CHSH_LABELS = (
+    "HH", "HV", "VH", "VV",
+    "HD", "HA", "VD", "VA",
+    "DH", "DV", "AH", "AV",
+    "DD", "DA", "AD", "AA",
+)
+
+# Dashboard tab order and labels. Modify this tuple to reconfigure the live UI.
+# Format: (key, label) where `key` matches the builder name in the Tk dashboard.
+DASHBOARD_TABS = (
+    ("plots", "Plots"),
+    ("histograms", "Histograms"),
+    ("settings", "Settings"),
+    ("export", "Data / Export"),
+)
+
+__all__ = [
+    "DEFAULT_PAIRS",
+    "GHZ_TRIPLETS",
+    "DEFAULT_SPECS",
+    "COINCIDENCE_PLOT_LABELS",
+    "CHSH_LABELS",
+    "DASHBOARD_TABS",
+]
