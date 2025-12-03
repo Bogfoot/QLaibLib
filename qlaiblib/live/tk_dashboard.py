@@ -83,6 +83,7 @@ class DashboardApp(tk.Tk):
         )))
         # Singles channels (keys 1/3/5)
         self.singles_channels = tuple(getattr(coincidence_specs, "SINGLES_PLOT_CHANNELS", range(1, 9)))
+        self.singles_as_rate = bool(getattr(coincidence_specs, "SINGLES_AS_RATE", False))
         self.max_points_var = tk.IntVar(value=history_points)
         self.hist_auto_var = tk.BooleanVar(value=True)
         self.hist_pair_var = tk.StringVar(value=self.specs[0].label)
@@ -306,7 +307,10 @@ class DashboardApp(tk.Tk):
 
     def _apply_update(self, update: LiveUpdate):
         self._latest_batch = update.batch
-        singles_counts = {ch: float(len(arr)) for ch, arr in update.batch.singles.items()}
+        if self.singles_as_rate and update.batch.duration_sec:
+            singles_counts = {ch: float(len(arr)) / update.batch.duration_sec for ch, arr in update.batch.singles.items()}
+        else:
+            singles_counts = {ch: float(len(arr)) for ch, arr in update.batch.singles.items()}
         self._elapsed += update.batch.duration_sec
         self.history.append(self._elapsed, singles_counts, update.coincidences, update.metrics)
         self._latest_flatten = {ch: arr.copy() for ch, arr in update.batch.singles.items()}

@@ -156,6 +156,7 @@ All lab defaults live in `qlaiblib/coincidence/specs.py` and propagate to CLI, p
 
 - **DEFAULT_PAIRS / GHZ_TRIPLETS / DEFAULT_SPECS** – the canonical coincidence definitions. Edit these to change what gets captured and displayed.
 - **SINGLES_PLOT_CHANNELS** – channels shown in singles time-series plots (keys 1/3/5 in the dashboard).
+- **SINGLES_AS_RATE** – set to `True` to display singles as rates (counts/s) instead of raw counts.
 - **COINCIDENCE_PLOT_LABELS** – controls which coincidence labels appear in plot modes 2/3/5 (coincidence traces).
 - **CHSH_LABELS** – labels shown in CHSH view (mode 6).
 - **DASHBOARD_TABS** – order/names of tabs in the live UI.

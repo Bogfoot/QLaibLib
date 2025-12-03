@@ -36,6 +36,9 @@ DEFAULT_SPECS = DEFAULT_PAIRS + GHZ_TRIPLETS
 # Singles channels to plot in time-series views (keys 1/3/5).
 SINGLES_PLOT_CHANNELS = tuple(range(1, 9))
 
+# If True, dashboard singles plots show rates (counts per second) instead of raw counts.
+SINGLES_AS_RATE = True
+
 # Which coincidence labels should appear in the live "coincidences" plots (keys 2,3,5).
 # By default we show all specs, but you can shorten or reorder this tuple.
 COINCIDENCE_PLOT_LABELS = tuple(spec.label for spec in DEFAULT_SPECS if len(spec.channels) >= 2)
@@ -62,6 +65,7 @@ __all__ = [
     "GHZ_TRIPLETS",
     "DEFAULT_SPECS",
     "SINGLES_PLOT_CHANNELS",
+    "SINGLES_AS_RATE",
     "COINCIDENCE_PLOT_LABELS",
     "CHSH_LABELS",
     "DASHBOARD_TABS",
