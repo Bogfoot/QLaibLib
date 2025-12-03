@@ -81,6 +81,8 @@ class DashboardApp(tk.Tk):
             "DH", "DV", "AH", "AV",
             "DD", "DA", "AD", "AA",
         )))
+        # Singles channels (keys 1/3/5)
+        self.singles_channels = tuple(getattr(coincidence_specs, "SINGLES_PLOT_CHANNELS", range(1, 9)))
         self.max_points_var = tk.IntVar(value=history_points)
         self.hist_auto_var = tk.BooleanVar(value=True)
         self.hist_pair_var = tk.StringVar(value=self.specs[0].label)
@@ -332,6 +334,8 @@ class DashboardApp(tk.Tk):
         if self.ax_singles is not None and "singles" in layout:
             ax = self.ax_singles
             for ch, values in sorted(self.history.singles.items()):
+                if ch not in self.singles_channels:
+                    continue
                 data = list(values)
                 line = self._lines["singles"].get(ch)
                 if line is None:

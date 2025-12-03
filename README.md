@@ -150,6 +150,52 @@ custom_pipeline = CoincidencePipeline(custom_specs)
 - **Offline scripts** (BIN replay, notebooks): pass `DEFAULT_SPECS` into the
   pipeline exactly as shown above, or mix in your own N-fold coincidences.
 
+## Configuring defaults & dashboard from code
+
+All lab defaults live in `qlaiblib/coincidence/specs.py` and propagate to CLI, plotting, and the Tk dashboard:
+
+- **DEFAULT_PAIRS / GHZ_TRIPLETS / DEFAULT_SPECS** – the canonical coincidence definitions. Edit these to change what gets captured and displayed.
+- **SINGLES_PLOT_CHANNELS** – channels shown in singles time-series plots (keys 1/3/5 in the dashboard).
+- **COINCIDENCE_PLOT_LABELS** – controls which coincidence labels appear in plot modes 2/3/5 (coincidence traces).
+- **CHSH_LABELS** – labels shown in CHSH view (mode 6).
+- **DASHBOARD_TABS** – order/names of tabs in the live UI.
+
+Delay auto-calibration defaults live in `qlaiblib/coincidence/delays.py`:
+
+- **DEFAULT_REF_PAIRS / DEFAULT_CROSS_PAIRS** – channel pairs used to find per-channel delays.
+- **auto_calibrate_delays(...)** + **specs_from_delays(...)** – utilities the CLI uses when you don’t pass `--use-default-specs`.
+
+After changing defaults, reinstall locally so `qlaib` picks them up:
+
+```bash
+pip install --force-reinstall .
+```
+
+### CLI knobs for delays
+
+- Use built-in defaults: `qlaib coincide --use-default-specs ...`
+- Auto-calibrate with custom scan bounds (picoseconds):
+  ```bash
+  qlaib coincide --window-ps 200 --delay-start-ps -8000 --delay-end-ps 8000 --delay-step-ps 50
+  ```
+- Provide your own lab defaults: edit `DEFAULT_PAIRS` / `DEFAULT_CROSS_PAIRS` and `DEFAULT_SPECS` in `qlaiblib/coincidence/specs.py`, then reinstall (`pip install --force-reinstall .`). The CLI will pick them up automatically.
+
+### How auto-calibrate (“autofinddelays”) works
+
+- Source code: `qlaiblib/coincidence/delays.py` (`auto_calibrate_delays` + `specs_from_delays`).
+- Inputs:
+  - Pairs to scan: `DEFAULT_REF_PAIRS` (like-polarization) from the same file; editable for your wiring.
+  - Scan parameters: `--window-ps`, `--delay-start-ps`, `--delay-end-ps`, `--delay-step-ps` CLI flags.
+  - Data: the first acquisition batch from the backend (`backend.capture()`), flattened per channel.
+- For each pair it sweeps delays, calls `coincfinder_backend.find_best_delay_ps` to maximize coincidences inside `window_ps`, and stores the best delay.
+- `specs_from_delays` then assigns those delays to channels and builds the full `CoincidenceSpec` set (both like- and cross-pairs).
+
+### Where `qlaib live` gets delays
+
+- On start, `qlaib live` captures one exposure chunk from the backend, then calls `auto_calibrate_delays` with `DEFAULT_REF_PAIRS` and your CLI scan bounds to find per-channel delays.
+- Those calibrated delays are passed to `specs_from_delays`, which builds the specs the dashboard uses for plots/metrics.
+- Currently `live` always calibrates; if you want to skip calibration and force static lab defaults, set `DEFAULT_SPECS` (and delays) in `specs.py`, then change the CLI to use them or add a `--use-default-specs` flag similarly to `qlaib replay`.
+
 ## Python API glimpse
 
 ```python

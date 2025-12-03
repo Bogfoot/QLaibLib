@@ -33,6 +33,9 @@ GHZ_TRIPLETS = (
 # Convenience tuple that can be imported directly in scripts / live dashboards
 DEFAULT_SPECS = DEFAULT_PAIRS + GHZ_TRIPLETS
 
+# Singles channels to plot in time-series views (keys 1/3/5).
+SINGLES_PLOT_CHANNELS = tuple(range(1, 9))
+
 # Which coincidence labels should appear in the live "coincidences" plots (keys 2,3,5).
 # By default we show all specs, but you can shorten or reorder this tuple.
 COINCIDENCE_PLOT_LABELS = tuple(spec.label for spec in DEFAULT_SPECS if len(spec.channels) >= 2)
@@ -58,6 +61,7 @@ __all__ = [
     "DEFAULT_PAIRS",
     "GHZ_TRIPLETS",
     "DEFAULT_SPECS",
+    "SINGLES_PLOT_CHANNELS",
     "COINCIDENCE_PLOT_LABELS",
     "CHSH_LABELS",
     "DASHBOARD_TABS",
