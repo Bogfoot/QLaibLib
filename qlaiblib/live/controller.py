@@ -31,12 +31,18 @@ class LiveAcquisition:
         self.backend = backend
         self.pipeline = pipeline
         self.exposure_sec = exposure_sec or backend.default_exposure_sec
+        self._spec_lock = threading.Lock()
         self._callbacks: List[Callable[[LiveUpdate], None]] = []
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
 
     def subscribe(self, callback: Callable[[LiveUpdate], None]) -> None:
         self._callbacks.append(callback)
+
+    def set_specs(self, specs):
+        # Swap pipeline specs under lock so UI updates don't race with run loop.
+        with self._spec_lock:
+            self.pipeline.specs = specs
 
     def _emit(self, update: LiveUpdate) -> None:
         for cb in list(self._callbacks):
@@ -47,7 +53,8 @@ class LiveAcquisition:
 
     def run_once(self) -> LiveUpdate:
         batch = self.backend.capture(self.exposure_sec)
-        coincidences = self.pipeline.run(batch)
+        with self._spec_lock:
+            coincidences = self.pipeline.run(batch)
         metrics = REGISTRY.compute_all(coincidences)
         update = LiveUpdate(batch=batch, coincidences=coincidences, metrics=metrics)
         self._emit(update)

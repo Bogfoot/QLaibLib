@@ -190,7 +190,7 @@ def replay(
     window_ps: float = typer.Option(250.0, help="Coincidence window in picoseconds."),
     plot: bool = typer.Option(False, help="Plot coincidences + metrics."),
     delay_start_ps: float = typer.Option(-30000, help="Delay scan range start (ps)."),
-    delay_end_ps: float = typer.Option(23000, help="Delay scan range end (ps)."),
+    delay_end_ps: float = typer.Option(30000, help="Delay scan range end (ps)."),
     delay_step_ps: float = typer.Option(10.0, help="Delay scan step (ps)."),
     timeseries: bool = typer.Option(False, help="Plot singles + coincidences time-series."),
     timeseries_chunk: float | None = typer.Option(None, help="Chunk size (s) for time-series plot (default 1 s, or exposure time if <=0)."),
