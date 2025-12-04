@@ -411,7 +411,7 @@ class DashboardApp(tk.Tk):
                 heralding = self._heralding_for_label(label)
                 last_c = data[-1] if data else 0
                 last_a = self._last_accidentals.get(label, 0.0)
-                display = f"{label} (C={last_c}, A={last_a:.0f}, H={heralding:.1f}%, V={contrast:.2f})"
+                display = f"{label} (CC={last_c} ({last_a:.0f}), H={heralding:.1f}%, C={contrast:.2f})"
                 line.set_label(display)
                 if data:
                     ts, ys = self._downsample_series(times, data)
