@@ -161,7 +161,11 @@ class DashboardApp(tk.Tk):
             textvariable=self.exposure_var,
             width=6,
             command=self._update_exposure,
-        ).pack(side=tk.LEFT)
+        )
+        spin = controls.winfo_children()[-1]
+        spin.pack(side=tk.LEFT)
+        spin.bind("<Return>", lambda _e: self._update_exposure())
+        spin.bind("<FocusOut>", lambda _e: self._update_exposure())
         ttk.Label(controls, text="Timeseries view (keys 1-6)").pack(side=tk.RIGHT, padx=8)
 
         self.figure = plt.Figure(figsize=(10, 7), dpi=100)
@@ -242,8 +246,14 @@ class DashboardApp(tk.Tk):
         self.controller.stop()
 
     def _update_exposure(self):
-        value = float(self.exposure_var.get())
+        try:
+            value = float(self.exposure_var.get())
+        except (tk.TclError, ValueError):
+            return
         self.controller.exposure_sec = value
+        # If the backend exposes an attribute, keep it in sync.
+        if hasattr(self.controller.backend, "default_exposure_sec"):
+            self.controller.backend.default_exposure_sec = value
 
     def _update_history_length(self):
         self.history.resize(int(self.max_points_var.get()))
@@ -781,4 +791,6 @@ def simple_prompt(parent, title: str, default: str) -> str | None:
 def run_dashboard(controller: LiveAcquisition, history_points: int = 200):
     app = DashboardApp(controller, history_points=history_points)
     app.protocol("WM_DELETE_WINDOW", app.on_close)
+    # Auto-start acquisition so users see plots immediately.
+    app.start()
     app.mainloop()
