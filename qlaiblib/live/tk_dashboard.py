@@ -251,9 +251,12 @@ class DashboardApp(tk.Tk):
         except (tk.TclError, ValueError):
             return
         self.controller.exposure_sec = value
-        # If the backend exposes an attribute, keep it in sync.
-        if hasattr(self.controller.backend, "default_exposure_sec"):
-            self.controller.backend.default_exposure_sec = value
+        # Drive backend exposure when supported (e.g., QuTAG).
+        backend = self.controller.backend
+        if hasattr(backend, "set_exposure"):
+            backend.set_exposure(value)  # hardware-friendly path
+        elif hasattr(backend, "default_exposure_sec"):
+            backend.default_exposure_sec = value
 
     def _update_history_length(self):
         self.history.resize(int(self.max_points_var.get()))
