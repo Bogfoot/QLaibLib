@@ -278,7 +278,9 @@ class DashboardApp(tk.Tk):
         )
         self.specs = new_specs
         # Propagate to the live pipeline so subsequent captures use the new window.
-        if getattr(self.controller, "pipeline", None):
+        if hasattr(self.controller, "set_specs"):
+            self.controller.set_specs(new_specs)
+        elif getattr(self.controller, "pipeline", None):
             self.controller.pipeline.specs = new_specs
         # Nudge plots/histogram to refresh with the updated window.
         self._lines["coincidences"] = {}
