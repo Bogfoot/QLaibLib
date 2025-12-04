@@ -149,8 +149,10 @@ class DashboardApp(tk.Tk):
     def _build_plot_tab(self, parent):
         controls = ttk.Frame(parent)
         controls.pack(fill=tk.X, padx=8, pady=4)
-        ttk.Button(controls, text="Start", command=self.start).pack(side=tk.LEFT, padx=4)
-        ttk.Button(controls, text="Stop", command=self.stop).pack(side=tk.LEFT, padx=4)
+        self.start_btn = ttk.Button(controls, text="Start", command=self.start)
+        self.stop_btn = ttk.Button(controls, text="Stop", command=self.stop)
+        self.start_btn.pack(side=tk.LEFT, padx=4)
+        self.stop_btn.pack(side=tk.LEFT, padx=4)
         ttk.Label(controls, text="Exposure (s)").pack(side=tk.LEFT, padx=(16, 4))
         self.exposure_var = tk.DoubleVar(value=self.controller.exposure_sec)
         spin = ttk.Spinbox(
@@ -166,6 +168,10 @@ class DashboardApp(tk.Tk):
         spin.bind("<Return>", lambda _e: self._update_exposure())
         spin.bind("<FocusOut>", lambda _e: self._update_exposure())
         ttk.Label(controls, text="Timeseries view (keys 1-6)").pack(side=tk.RIGHT, padx=8)
+        # Status line for quick confirmation of current settings
+        self.status_var = tk.StringVar(value=f"Running | Exposure: {self.controller.exposure_sec:.2f} s | Window: {self.window_ps.get():.0f} ps")
+        status_lbl = ttk.Label(parent, textvariable=self.status_var, anchor="w")
+        status_lbl.pack(fill=tk.X, padx=8, pady=(0, 4))
 
         self.figure = plt.Figure(figsize=(10, 7), dpi=100)
         self.figure.patch.set_facecolor(COLOR_BG)
@@ -237,12 +243,20 @@ class DashboardApp(tk.Tk):
             return
         self._running = True
         self.controller.start()
+        if hasattr(self, "start_btn"):
+            self.start_btn.state(["disabled"])
+        if hasattr(self, "stop_btn"):
+            self.stop_btn.state(["!disabled"])
 
     def stop(self):
         if not self._running:
             return
         self._running = False
         self.controller.stop()
+        if hasattr(self, "start_btn"):
+            self.start_btn.state(["!disabled"])
+        if hasattr(self, "stop_btn"):
+            self.stop_btn.state(["disabled"])
 
     def _update_exposure(self):
         try:
@@ -256,6 +270,8 @@ class DashboardApp(tk.Tk):
             backend.set_exposure(value)  # hardware-friendly path
         elif hasattr(backend, "default_exposure_sec"):
             backend.default_exposure_sec = value
+        # Update status line
+        self._refresh_status()
 
     def _update_history_length(self):
         self.history.resize(int(self.max_points_var.get()))
@@ -287,6 +303,7 @@ class DashboardApp(tk.Tk):
         self._refresh_plots()
         if self.hist_auto_var.get():
             self._refresh_histogram()
+        self._refresh_status()
 
     def _export_history(self):
         if not self.history.times:
@@ -363,8 +380,17 @@ class DashboardApp(tk.Tk):
         self._last_accidentals = dict(update.coincidences.accidentals)
         self._last_metrics = list(update.metrics)
         self._refresh_plots()
+        self._refresh_status()
         if self.hist_auto_var.get():
             self._refresh_histogram()
+
+    def _refresh_status(self):
+        if not hasattr(self, "status_var"):
+            return
+        running = "Running" if self._running else "Stopped"
+        self.status_var.set(
+            f"{running} | Exposure: {self.exposure_var.get():.2f} s | Window: {self.window_ps.get():.0f} ps"
+        )
 
     def _refresh_plots(self):
         times = list(self.history.times)
@@ -679,17 +705,29 @@ class DashboardApp(tk.Tk):
         if not spec or len(spec.channels) != 2:
             return
         ch_a, ch_b = spec.channels
-        trace_a = self._latest_flatten.get(ch_a)
-        trace_b = self._latest_flatten.get(ch_b)
+        # snapshot under controller spec lock if available to avoid races
+        lock = getattr(self.controller, "_spec_lock", None)
+        if lock:
+            lock.acquire()
+        try:
+            trace_a = self._latest_flatten.get(ch_a)
+            trace_b = self._latest_flatten.get(ch_b)
+            window_ps = float(self.window_ps.get())
+            start_ps = float(self.hist_start_ps.get())
+            end_ps = float(self.hist_end_ps.get())
+            step_ps = float(self.hist_step_ps.get())
+        finally:
+            if lock:
+                lock.release()
         if trace_a is None or trace_b is None or not len(trace_a) or not len(trace_b):
             return
         params = (
             trace_a.copy(),
             trace_b.copy(),
-            float(self.hist_window_ps.get()),
-            float(self.hist_start_ps.get()),
-            float(self.hist_end_ps.get()),
-            float(self.hist_step_ps.get()),
+            window_ps,
+            start_ps,
+            end_ps,
+            step_ps,
             label,
         )
         self._pending_histogram = self.executor.submit(self._compute_histogram, params)
