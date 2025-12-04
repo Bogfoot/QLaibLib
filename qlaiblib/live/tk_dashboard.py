@@ -382,7 +382,7 @@ class DashboardApp(tk.Tk):
                     last_val = data[-1]
                     ts, ys = self._downsample_series(times, data)
                     line.set_data(ts, ys)
-                    unit = "counts/s" if self.singles_as_rate else "counts"
+                    unit = "cpe" if self.singles_as_rate else "cpe"
                     line.set_label(f"Ch {ch} ({last_val:.0f} {unit})")
                 else:
                     line.set_data([], [])
@@ -390,7 +390,7 @@ class DashboardApp(tk.Tk):
             self._set_xlimits(ax, times)
             ax.relim()
             ax.autoscale_view(True, True, True)
-            ax.set_ylabel("Singles (counts/s)" if self.singles_as_rate else "Singles (counts)")
+            ax.set_ylabel("Singles (cpe)")
             ax.legend(ncol=4, fontsize=7, **LEGEND_KW)
             ax.grid(True, color=COLOR_GRID, alpha=0.3)
             ax.margins(x=0.02)
@@ -411,7 +411,7 @@ class DashboardApp(tk.Tk):
                 heralding = self._heralding_for_label(label)
                 last_c = data[-1] if data else 0
                 last_a = self._last_accidentals.get(label, 0.0)
-                display = f"{label} (CC={last_c} ({last_a:.0f}), H={heralding:.1f}%, C={contrast:.2f})"
+                display = f"{label} (CC={last_c}, H={heralding:.1f}%, C={contrast:.2f})" # ({last_a})
                 line.set_label(display)
                 if data:
                     ts, ys = self._downsample_series(times, data)
