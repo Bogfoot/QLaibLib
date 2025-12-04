@@ -10,7 +10,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "qlaiblib"
-version = "0.1.0"
+version = "0.8.9"
 description = "Toolkit for singles counting, coincidences, metrics, and live plotting for QuTAG/coincfinder setups."
 readme = "README.md"
 authors = [
