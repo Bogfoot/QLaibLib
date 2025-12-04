@@ -153,7 +153,7 @@ class DashboardApp(tk.Tk):
         ttk.Button(controls, text="Stop", command=self.stop).pack(side=tk.LEFT, padx=4)
         ttk.Label(controls, text="Exposure (s)").pack(side=tk.LEFT, padx=(16, 4))
         self.exposure_var = tk.DoubleVar(value=self.controller.exposure_sec)
-        ttk.Spinbox(
+        spin = ttk.Spinbox(
             controls,
             from_=0.1,
             to=60.0,
@@ -162,7 +162,6 @@ class DashboardApp(tk.Tk):
             width=6,
             command=self._update_exposure,
         )
-        spin = controls.winfo_children()[-1]
         spin.pack(side=tk.LEFT)
         spin.bind("<Return>", lambda _e: self._update_exposure())
         spin.bind("<FocusOut>", lambda _e: self._update_exposure())
