@@ -16,6 +16,7 @@ class HistoryBuffer:
         self.times: Deque[float] = deque(maxlen=max_points)
         self.singles: Dict[int, Deque[float]] = {}
         self.coincidences: Dict[str, Deque[float]] = {}
+        self.accidentals: Dict[str, Deque[float]] = {}
         self.metrics: Dict[str, Deque[float]] = {}
         self.metric_sigmas: Dict[str, Deque[float]] = {}
 
@@ -28,6 +29,8 @@ class HistoryBuffer:
             self.singles[key] = deque(self.singles[key], maxlen=max_points)
         for key in list(self.coincidences.keys()):
             self.coincidences[key] = deque(self.coincidences[key], maxlen=max_points)
+        for key in list(self.accidentals.keys()):
+            self.accidentals[key] = deque(self.accidentals[key], maxlen=max_points)
         for key in list(self.metrics.keys()):
             self.metrics[key] = deque(self.metrics[key], maxlen=max_points)
         for key in list(self.metric_sigmas.keys()):
@@ -46,6 +49,9 @@ class HistoryBuffer:
         for label in coincidences.counts:
             self.coincidences.setdefault(label, deque(maxlen=self.max_points)).append(
                 coincidences.counts[label]
+            )
+            self.accidentals.setdefault(label, deque(maxlen=self.max_points)).append(
+                coincidences.accidentals.get(label, 0.0)
             )
         for metric in metrics:
             self.metrics.setdefault(metric.name, deque(maxlen=self.max_points)).append(metric.value)

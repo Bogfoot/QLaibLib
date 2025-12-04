@@ -14,7 +14,7 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ..coincidence import specs as coincidence_specs
-from ..data.models import CoincidenceResult, MetricValue
+from ..data.models import CoincidenceResult, MetricValue, CoincidenceSpec
 from ..plotting import static as static_plots
 from ..plotting import timeseries as ts_plots
 from ..io import coincfinder_backend as cf_backend
@@ -87,16 +87,21 @@ class DashboardApp(tk.Tk):
         self.max_points_var = tk.IntVar(value=history_points)
         self.hist_auto_var = tk.BooleanVar(value=True)
         self.hist_pair_var = tk.StringVar(value=self.specs[0].label)
-        self.hist_window_ps = tk.DoubleVar(value=250.0)
+        # single source of truth for the coincidence window (ps) across plots + histogram
+        initial_window = self.specs[0].window_ps if self.specs else 250.0
+        self.window_ps = tk.DoubleVar(value=initial_window)
+        self.window_ps.trace_add("write", self._update_window)
+        self.hist_window_ps = self.window_ps
         self.hist_start_ps = tk.DoubleVar(value=-30000.0)
         self.hist_end_ps = tk.DoubleVar(value=30000.0)
         self.hist_step_ps = tk.DoubleVar(value=10.0)
-        self.coinc_window_ps = self.hist_auto_var
+        self.coinc_window_ps = self.window_ps
         self.timeseries_chunk = tk.DoubleVar(value=controller.exposure_sec)
         self._latest_batch = None
         self._latest_flatten = {}
         self._elapsed = 0.0
         self._last_counts: dict[str, int] = {}
+        self._last_accidentals: dict[str, float] = {}
         self._last_metrics: list[MetricValue] = []
         self.delay_vars = {ch: tk.DoubleVar(value=self.settings.get("delays_ps", {}).get(str(ch), 0.0)) for ch in range(1, 9)}
         for ch, var in self.delay_vars.items():
@@ -243,6 +248,32 @@ class DashboardApp(tk.Tk):
     def _update_history_length(self):
         self.history.resize(int(self.max_points_var.get()))
 
+    def _update_window(self, *_args):
+        """Keep coincidence window in sync across specs, plots, and histogram."""
+        try:
+            win = float(self.window_ps.get())
+        except (tk.TclError, ValueError):
+            return
+        # Rebuild specs with the new window while preserving labels/channels/delays.
+        new_specs = tuple(
+            CoincidenceSpec(
+                label=spec.label,
+                channels=spec.channels,
+                window_ps=win,
+                delay_ps=spec.delay_ps,
+            )
+            for spec in self.specs
+        )
+        self.specs = new_specs
+        # Propagate to the live pipeline so subsequent captures use the new window.
+        if getattr(self.controller, "pipeline", None):
+            self.controller.pipeline.specs = new_specs
+        # Nudge plots/histogram to refresh with the updated window.
+        self._lines["coincidences"] = {}
+        self._refresh_plots()
+        if self.hist_auto_var.get():
+            self._refresh_histogram()
+
     def _export_history(self):
         if not self.history.times:
             messagebox.showinfo("Export", "No history to export yet.")
@@ -315,6 +346,7 @@ class DashboardApp(tk.Tk):
         self.history.append(self._elapsed, singles_counts, update.coincidences, update.metrics)
         self._latest_flatten = {ch: arr.copy() for ch, arr in update.batch.singles.items()}
         self._last_counts = dict(update.coincidences.counts)
+        self._last_accidentals = dict(update.coincidences.accidentals)
         self._last_metrics = list(update.metrics)
         self._refresh_plots()
         if self.hist_auto_var.get():
@@ -377,7 +409,9 @@ class DashboardApp(tk.Tk):
                     self._lines["coincidences"][label] = line
                 contrast = self._contrast_for_label(label)
                 heralding = self._heralding_for_label(label)
-                display = f"{label} (C={data[-1] if data else 0}, H={heralding:.1f}%, V={contrast:.2f})"
+                last_c = data[-1] if data else 0
+                last_a = self._last_accidentals.get(label, 0.0)
+                display = f"{label} (C={last_c}, A={last_a:.0f}, H={heralding:.1f}%, V={contrast:.2f})"
                 line.set_label(display)
                 if data:
                     ts, ys = self._downsample_series(times, data)
