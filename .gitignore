@@ -63,8 +63,6 @@ coincfinder.cp312-win_amd64.pyd
 Makefile
 
 # Legacy/legacy scripts (keep ignored unless explicitly added)
-Client.py
-Server.py
 Print_Counts_and_Stats.py
 Stability_Check_and_Record.py
 PlotterApp_Cpp.py
