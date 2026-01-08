@@ -22,6 +22,24 @@ Thumbs.db
 build/
 dist/
 *.egg-info/
+# Local virtualenvs
+.env
+.venv/
+env/
+venv/
+# Python cache
+__pycache__/
+*.py[cod]
+# Scripts cache
+scripts/__pycache__/
+# Compiled extensions
+*.so
+*.pyd
+*.dll
+*.o
+*.obj
+*.lib
+*.a
 # CMake artifacts
 CMakeFiles/
 CMakeCache.txt

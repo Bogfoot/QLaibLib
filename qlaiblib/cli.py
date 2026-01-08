@@ -43,7 +43,9 @@ def _group_metrics(values):
 
 def _create_backend(mock: bool, exposure: float, *, demo_file: Path | None = None, bucket_seconds: float | None = None):
     if demo_file:
-        return FileReplayBackend(demo_file, exposure_sec=exposure, bucket_seconds=bucket_seconds)
+        # Default replay bucket to the requested exposure unless explicitly overridden
+        bucket = bucket_seconds if bucket_seconds is not None else exposure
+        return FileReplayBackend(demo_file, exposure_sec=exposure, bucket_seconds=bucket)
     if mock:
         return MockBackend(exposure_sec=exposure)
     return QuTAGBackend(exposure_sec=exposure)

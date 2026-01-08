@@ -17,10 +17,12 @@ a browser. Ready and lab friendly. :)
 - **Plotting**: Matplotlib helpers for singles, coincidences, and metric
   summaries; reusable both in scripts and in the dashboard.
 - **Live dashboard**: Tkinter GUI with tabs for live time-series plots, delay
-  histograms, settings, and data/export tools. Supports keyboard shortcuts (1–6)
-  to switch plot layouts (including a CHSH view with all 16 coincidence pairs
-  and S±σ), per-pair contrast/heralding stats, histogram auto-refresh, and a
-  history buffer (default 500 points) with CSV/raw BIN export buttons.
+  histograms, settings, and data/export tools. Auto-starts acquisition on launch
+  (Start is disabled while running), keeps the coincidence window in sync
+  between plots and histograms, shows per-pair contrast/heralding + accidentals
+  in the legend, and exposes a status line (`Running | Exposure | Window`) so
+  you can see edits take effect. Keyboard shortcuts (1–6) switch layouts;
+  histogram auto-refresh and CSV/raw BIN export are built in.
 - **CLI**: `qlaib` entry point with `count`, `coincide`, and `live` commands.
 
 ## Installation
@@ -67,6 +69,7 @@ qlaib coincide --exposure 0.5 --window-ps 200
 
 # Launch the Tkinter dashboard with 2-second integration
 qlaib live --exposure 2.0
+# Exposure and coincidence-window edits in the UI apply live to acquisition + plots
 
 # Process an existing BIN file (≈5 s capture) without hardware
 qlaib replay Data/sample_capture.bin --window-ps 200 --plot
@@ -196,6 +199,7 @@ pip install --force-reinstall .
 - On start, `qlaib live` captures one exposure chunk from the backend, then calls `auto_calibrate_delays` with `DEFAULT_REF_PAIRS` and your CLI scan bounds to find per-channel delays.
 - Those calibrated delays are passed to `specs_from_delays`, which builds the specs the dashboard uses for plots/metrics.
 - Currently `live` always calibrates; if you want to skip calibration and force static lab defaults, set `DEFAULT_SPECS` (and delays) in `specs.py`, then change the CLI to use them or add a `--use-default-specs` flag similarly to `qlaib replay`.
+- The live dashboard auto-starts acquisition. Exposure changes (CLI `--exposure` or the GUI field) and coincidence-window edits apply on the next chunk to both acquisition and plots. A status line shows the current mode/values, and the coincidence window stays in sync between time-series plots and the histogram tab.
 
 ## Python API glimpse
 

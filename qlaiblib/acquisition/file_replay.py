@@ -27,7 +27,8 @@ class FileReplayBackend(AcquisitionBackend):
     ) -> None:
         self.path = Path(path)
         self.default_exposure_sec = exposure_sec
-        self.bucket_seconds = bucket_seconds
+        # If not provided, bucket_seconds defaults to exposure for consistent chunking
+        self.bucket_seconds = bucket_seconds if bucket_seconds is not None else exposure_sec
         self.loop = loop
         self._batches = self._load_batches()
         self._iterator: Iterator[AcquisitionBatch] = itertools.cycle(self._batches) if loop else iter(self._batches)
