@@ -24,7 +24,7 @@ from qlaiblib.coincidence.pipeline import CoincidencePipeline
 
 @dataclass
 class ServerConfig:
-    host: str = "141.255.216.170"
+    host: str = "10.12.42.216"
     port: int = 65432
     exposure_sec: float = 5.0
     window_ps: float = 250.0
